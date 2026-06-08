@@ -61,14 +61,14 @@ export default {
           ring: "hsl(var(--sidebar-ring))",
         },
       },
-      fontFamily: {
-        sans: ["Inter", "Hind Siliguri", "sans-serif"],
-        bangla: ["Hind Siliguri", "Inter", "sans-serif"],
-      },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+      },
+      fontFamily: {
+        sans: ["Inter", "Hind Siliguri", "system-ui", "sans-serif"],
+        bangla: ["Hind Siliguri", "Inter", "system-ui", "sans-serif"],
       },
       keyframes: {
         "accordion-down": {

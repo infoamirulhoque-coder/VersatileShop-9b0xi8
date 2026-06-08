@@ -11,6 +11,8 @@ export const FACEBOOK_PAGE = 'https://www.facebook.com/share/1EAzfPtWbN/';
 
 export const LOGO_URL = 'https://cdn-ai.onspace.ai/onspace/project/uploads/3HdtFfGzbXDuVTEnk83LJk/Messenger_creation_E13BC199-B1FD-4A9F-BD4C-A4B493064EA6.jpeg';
 
+export const DEVELOPER_NAME = 'আমিরুল_আদনান';
+
 export const CATEGORIES: Category[] = [
   { id: 'all', name: 'All Products', nameBn: 'সব পণ্য', icon: '🛍️', color: 'from-teal-500 to-cyan-500' },
   { id: 'cap', name: 'Head Cap', nameBn: 'হেড ক্যাপ', icon: '🧢', color: 'from-blue-500 to-indigo-500' },
@@ -22,6 +24,7 @@ export const CATEGORIES: Category[] = [
   { id: 'other', name: 'Others', nameBn: 'অন্যান্য', icon: '📦', color: 'from-gray-500 to-slate-500' },
 ];
 
+// Only Dhaka city and surrounding districts for COD + free delivery
 export const DHAKA_DISTRICTS = ['ঢাকা', 'নারায়ণগঞ্জ', 'গাজীপুর', 'মুন্সিগঞ্জ', 'মানিকগঞ্জ', 'নরসিংদী'];
 
 export const BANGLADESH_DISTRICTS = [
@@ -38,7 +41,7 @@ export const BANGLADESH_DISTRICTS = [
 
 export const SAMPLE_PRODUCTS: Product[] = [
   {
-    id: '1',
+    id: 'sample_1',
     name: 'Classic Snapback Cap',
     nameBn: 'ক্লাসিক স্ন্যাপব্যাক ক্যাপ',
     price: 450,
@@ -53,14 +56,14 @@ export const SAMPLE_PRODUCTS: Product[] = [
     createdAt: new Date().toISOString(),
   },
   {
-    id: '2',
-    name: 'Premium Men\'s Watch',
+    id: 'sample_2',
+    name: "Premium Men's Watch",
     nameBn: 'প্রিমিয়াম মেন্স ওয়াচ',
     price: 1200,
     originalPrice: 1500,
     category: 'watch',
     images: ['https://images.unsplash.com/photo-1524592094714-0f0654e20314?w=500&auto=format'],
-    description: 'Elegant men\'s watch with steel band',
+    description: "Elegant men's watch with steel band",
     descriptionBn: 'এলিগেন্ট মেন্স ওয়াচ, স্টিল ব্যান্ড সহ',
     stock: 20,
     badge: 'hot',
@@ -68,7 +71,7 @@ export const SAMPLE_PRODUCTS: Product[] = [
     createdAt: new Date().toISOString(),
   },
   {
-    id: '3',
+    id: 'sample_3',
     name: 'Polarized Sunglasses',
     nameBn: 'পোলারাইজড সানগ্লাস',
     price: 650,
@@ -83,7 +86,7 @@ export const SAMPLE_PRODUCTS: Product[] = [
     createdAt: new Date().toISOString(),
   },
   {
-    id: '4',
+    id: 'sample_4',
     name: 'Drop Shoulder T-Shirt',
     nameBn: 'ড্রপ শোল্ডার টি-শার্ট',
     price: 550,
@@ -97,7 +100,7 @@ export const SAMPLE_PRODUCTS: Product[] = [
     createdAt: new Date().toISOString(),
   },
   {
-    id: '5',
+    id: 'sample_5',
     name: 'Graphic T-Shirt',
     nameBn: 'গ্রাফিক টি-শার্ট',
     price: 380,
@@ -108,11 +111,11 @@ export const SAMPLE_PRODUCTS: Product[] = [
     descriptionBn: 'কুল গ্রাফিক প্রিন্টেড প্রিমিয়াম টি-শার্ট',
     stock: 60,
     badge: 'sale',
-    featured: false,
+    featured: true,
     createdAt: new Date().toISOString(),
   },
   {
-    id: '6',
+    id: 'sample_6',
     name: 'Football Jersey',
     nameBn: 'ফুটবল জার্সি',
     price: 750,
@@ -130,15 +133,15 @@ export const SAMPLE_PRODUCTS: Product[] = [
 
 export const SAMPLE_ANNOUNCEMENTS: Announcement[] = [
   {
-    id: '1',
-    text: '🎉 Free delivery inside Dhaka! Order now!',
-    textBn: '🎉 ঢাকার ভিতরে ফ্রি ডেলিভারি! এখনই অর্ডার করুন!',
+    id: 'ann_1',
+    text: '🎉 Free Cash on Delivery inside Dhaka! Order now!',
+    textBn: '🎉 ঢাকার ভিতরে ক্যাশ-অন ডেলিভারি (বিনামূল্যে)! এখনই অর্ডার করুন!',
     active: true,
     createdAt: new Date().toISOString(),
     type: 'promo',
   },
   {
-    id: '2',
+    id: 'ann_2',
     text: '📦 Fast delivery all over Bangladesh - Outside Dhaka only ৳100 charge!',
     textBn: '📦 সারাদেশে দ্রুত ডেলিভারি - ঢাকার বাইরে মাত্র ১০০ টাকা ডেলিভারি চার্জ!',
     active: true,
