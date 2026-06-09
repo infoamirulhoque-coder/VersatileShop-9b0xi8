@@ -22,9 +22,22 @@ export default function Index() {
 
   useEffect(() => {
     loadProducts();
-    // Poll for product updates every 2 seconds so admin changes reflect immediately
-    const interval = setInterval(loadProducts, 2000);
-    return () => clearInterval(interval);
+
+    // Listen for storage changes from admin panel (cross-tab)
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === 'versatile_products') {
+        loadProducts();
+      }
+    };
+
+    // Also poll every 1.5 seconds for same-tab changes (admin panel in same window)
+    const interval = setInterval(loadProducts, 1500);
+    window.addEventListener('storage', handleStorage);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('storage', handleStorage);
+    };
   }, [loadProducts]);
 
   const featured = products.filter(p => p.featured).slice(0, 8);
@@ -174,35 +187,31 @@ export default function Index() {
       </section>
 
       {/* ===== FEATURED PRODUCTS ===== */}
-      <section className="py-16 bg-background">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="flex items-center justify-between mb-10">
-            <div>
-              <h2 className="bangla text-3xl font-extrabold mb-2">{t('ফিচার্ড পণ্য', 'Featured Products')}</h2>
-              <p className="bangla text-muted-foreground">{t('বিশেষভাবে নির্বাচিত সেরা পণ্যসমূহ', 'Hand-picked best products')}</p>
+      {featured.length > 0 && (
+        <section className="py-16 bg-background">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6">
+            <div className="flex items-center justify-between mb-10">
+              <div>
+                <h2 className="bangla text-3xl font-extrabold mb-2">{t('ফিচার্ড পণ্য', 'Featured Products')}</h2>
+                <p className="bangla text-muted-foreground">{t('বিশেষভাবে নির্বাচিত সেরা পণ্যসমূহ', 'Hand-picked best products')}</p>
+              </div>
+              <Link to="/shop"
+                className="bangla hidden sm:flex items-center gap-2 text-primary font-semibold hover:gap-3 transition-all duration-300 text-sm">
+                {t('সব পণ্য দেখুন', 'View All')}
+                <ArrowRight className="w-4 h-4" />
+              </Link>
             </div>
-            <Link to="/shop"
-              className="bangla hidden sm:flex items-center gap-2 text-primary font-semibold hover:gap-3 transition-all duration-300 text-sm">
-              {t('সব পণ্য দেখুন', 'View All')}
-              <ArrowRight className="w-4 h-4" />
-            </Link>
-          </div>
-          {featured.length === 0 ? (
-            <div className="text-center py-16 text-muted-foreground bangla text-lg">
-              {t('কোনো পণ্য নেই।', 'No products yet.')}
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-5">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
               {featured.map((p, i) => <ProductCard key={p.id} product={p} index={i} />)}
             </div>
-          )}
-          <div className="text-center mt-6 sm:hidden">
-            <Link to="/shop" className="bangla inline-flex items-center gap-2 text-primary font-semibold">
-              {t('সব পণ্য দেখুন', 'View All')} <ArrowRight className="w-4 h-4" />
-            </Link>
+            <div className="text-center mt-6 sm:hidden">
+              <Link to="/shop" className="bangla inline-flex items-center gap-2 text-primary font-semibold">
+                {t('সব পণ্য দেখুন', 'View All')} <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* ===== ALL PRODUCTS ===== */}
       <section className="py-16 bg-muted/30">
@@ -227,7 +236,16 @@ export default function Index() {
               </button>
             ))}
           </div>
-          {filtered.length === 0 ? (
+
+          {products.length === 0 ? (
+            <div className="text-center py-20">
+              <div className="text-6xl mb-4">🛍️</div>
+              <h3 className="bangla text-xl font-bold mb-2 text-muted-foreground">{t('এখনো কোনো পণ্য নেই', 'No products yet')}</h3>
+              <p className="bangla text-muted-foreground text-sm">
+                {t('অ্যাডমিন প্যানেল থেকে পণ্য যোগ করুন', 'Add products from admin panel')}
+              </p>
+            </div>
+          ) : filtered.length === 0 ? (
             <div className="text-center py-16 text-muted-foreground bangla text-lg">
               {t('এই বিভাগে কোনো পণ্য নেই।', 'No products in this category.')}
             </div>

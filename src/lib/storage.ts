@@ -17,9 +17,12 @@ function get<T>(key: string, fallback: T): T {
     return v ? JSON.parse(v) : fallback;
   } catch { return fallback; }
 }
+
 function set<T>(key: string, value: T) {
   try {
     localStorage.setItem(key, JSON.stringify(value));
+    // Dispatch a custom event so same-tab listeners can react
+    window.dispatchEvent(new StorageEvent('storage', { key }));
   } catch (e) {
     console.error('Storage error:', e);
   }
@@ -29,7 +32,8 @@ function set<T>(key: string, value: T) {
 function initProducts(): Product[] {
   const initialized = localStorage.getItem(KEYS.productsInit);
   if (!initialized) {
-    set(KEYS.products, SAMPLE_PRODUCTS);
+    const raw = JSON.stringify(SAMPLE_PRODUCTS);
+    localStorage.setItem(KEYS.products, raw);
     localStorage.setItem(KEYS.productsInit, 'true');
     return SAMPLE_PRODUCTS;
   }
@@ -39,14 +43,15 @@ function initProducts(): Product[] {
 function initAnnouncements(): Announcement[] {
   const initialized = localStorage.getItem(KEYS.announcementsInit);
   if (!initialized) {
-    set(KEYS.announcements, SAMPLE_ANNOUNCEMENTS);
+    const raw = JSON.stringify(SAMPLE_ANNOUNCEMENTS);
+    localStorage.setItem(KEYS.announcements, raw);
     localStorage.setItem(KEYS.announcementsInit, 'true');
     return SAMPLE_ANNOUNCEMENTS;
   }
   return get<Announcement[]>(KEYS.announcements, SAMPLE_ANNOUNCEMENTS);
 }
 
-// Products
+// ===== Products =====
 export const getProducts = (): Product[] => initProducts();
 export const saveProducts = (p: Product[]) => set(KEYS.products, p);
 export const addProduct = (p: Product) => {
@@ -56,7 +61,7 @@ export const addProduct = (p: Product) => {
 export const updateProduct = (p: Product) => saveProducts(getProducts().map(x => x.id === p.id ? p : x));
 export const deleteProduct = (id: string) => saveProducts(getProducts().filter(x => x.id !== id));
 
-// Orders
+// ===== Orders =====
 export const getOrders = (): Order[] => get<Order[]>(KEYS.orders, []);
 export const saveOrders = (o: Order[]) => set(KEYS.orders, o);
 export const addOrder = (o: Order) => {
@@ -65,18 +70,28 @@ export const addOrder = (o: Order) => {
 };
 export const updateOrder = (o: Order) => saveOrders(getOrders().map(x => x.id === o.id ? o : x));
 
-// Announcements
+// ===== Announcements =====
 export const getAnnouncements = (): Announcement[] => initAnnouncements();
 export const saveAnnouncements = (a: Announcement[]) => set(KEYS.announcements, a);
 export const addAnnouncement = (a: Announcement) => saveAnnouncements([...getAnnouncements(), a]);
 export const updateAnnouncement = (a: Announcement) => saveAnnouncements(getAnnouncements().map(x => x.id === a.id ? a : x));
 export const deleteAnnouncement = (id: string) => saveAnnouncements(getAnnouncements().filter(x => x.id !== id));
 
-// Cart
+// ===== Cart =====
 export const getCart = (): CartItem[] => get<CartItem[]>(KEYS.cart, []);
-export const saveCart = (c: CartItem[]) => set(KEYS.cart, c);
+export const saveCart = (c: CartItem[]) => {
+  try {
+    localStorage.setItem(KEYS.cart, JSON.stringify(c));
+  } catch (e) {
+    console.error('Cart save error:', e);
+  }
+};
 
-// Admin
-export const setAdminAuth = (v: boolean) => set(KEYS.adminAuth, v);
+// ===== Admin Auth =====
+export const setAdminAuth = (v: boolean) => {
+  try {
+    localStorage.setItem(KEYS.adminAuth, JSON.stringify(v));
+  } catch {}
+};
 export const getAdminAuth = (): boolean => get<boolean>(KEYS.adminAuth, false);
 export const clearAdminAuth = () => localStorage.removeItem(KEYS.adminAuth);

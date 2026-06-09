@@ -22,8 +22,17 @@ export default function Shop() {
 
   useEffect(() => {
     loadProducts();
-    const interval = setInterval(loadProducts, 2000);
-    return () => clearInterval(interval);
+
+    // Listen for admin panel product changes
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === 'versatile_products') loadProducts();
+    };
+    const interval = setInterval(loadProducts, 1500);
+    window.addEventListener('storage', handleStorage);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('storage', handleStorage);
+    };
   }, [loadProducts]);
 
   useEffect(() => {

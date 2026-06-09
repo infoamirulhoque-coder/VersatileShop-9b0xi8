@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Package, ShoppingBag, Megaphone, LogOut, Plus, Trash2,
-  Edit3, Save, X, Bell, AlertCircle, TrendingUp, RefreshCw
+  Edit3, Save, X, Bell, AlertCircle, TrendingUp, RefreshCw, Upload, ImageIcon
 } from 'lucide-react';
 import {
   getProducts, addProduct, updateProduct, deleteProduct,
@@ -21,6 +21,141 @@ const EMPTY_PRODUCT: Omit<Product, 'id' | 'createdAt'> = {
   description: '', descriptionBn: '', stock: 10, featured: false,
 };
 
+// ===== Image Upload Component =====
+interface ImageUploaderProps {
+  images: string[];
+  onImagesChange: (images: string[]) => void;
+}
+
+function ImageUploader({ images, onImagesChange }: ImageUploaderProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+
+  const processFiles = (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    const fileArr = Array.from(files).filter(f => f.type.startsWith('image/'));
+    if (fileArr.length === 0) {
+      toast.error('শুধুমাত্র ছবি ফাইল আপলোড করুন।');
+      return;
+    }
+    setUploading(true);
+    let loaded = 0;
+    const newImages: string[] = [];
+    fileArr.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const result = e.target?.result as string;
+        if (result) newImages.push(result);
+        loaded++;
+        if (loaded === fileArr.length) {
+          onImagesChange([...images, ...newImages]);
+          setUploading(false);
+          toast.success(`${fileArr.length}টি ছবি সফলভাবে যোগ করা হয়েছে!`);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    processFiles(e.target.files);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    processFiles(e.dataTransfer.files);
+  };
+
+  const removeImage = (index: number) => {
+    onImagesChange(images.filter((_, i) => i !== index));
+  };
+
+  return (
+    <div className="space-y-3">
+      {/* Upload Area */}
+      <div
+        onClick={() => fileInputRef.current?.click()}
+        onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={handleDrop}
+        className={cn(
+          "border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all duration-200",
+          dragOver
+            ? "border-primary bg-primary/10 scale-[1.01]"
+            : "border-border hover:border-primary/60 hover:bg-primary/5"
+        )}
+      >
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          multiple
+          onChange={handleFileChange}
+          className="hidden"
+        />
+        {uploading ? (
+          <div className="flex flex-col items-center gap-2">
+            <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+            <p className="bangla text-sm text-primary font-medium">আপলোড হচ্ছে...</p>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center gap-2">
+            <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center mb-1">
+              <Upload className="w-6 h-6 text-primary" />
+            </div>
+            <p className="bangla text-sm font-semibold text-foreground">
+              ছবি আপলোড করতে ক্লিক করুন অথবা টেনে আনুন
+            </p>
+            <p className="bangla text-xs text-muted-foreground">
+              JPG, PNG, WEBP — একাধিক ছবি একসাথে বেছে নিন
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Image Previews */}
+      {images.length > 0 && (
+        <div className="flex flex-wrap gap-3">
+          {images.map((img, i) => (
+            <div key={i} className="relative w-20 h-20 group rounded-xl overflow-hidden border-2 border-border shadow-sm">
+              <img
+                src={img}
+                alt={`পণ্যের ছবি ${i + 1}`}
+                className="w-full h-full object-cover"
+              />
+              {i === 0 && (
+                <span className="absolute bottom-0 left-0 right-0 bg-primary/80 text-white text-[9px] font-bold text-center py-0.5 bangla">
+                  মূল ছবি
+                </span>
+              )}
+              <button
+                onClick={() => removeImage(i)}
+                className="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
+                title="Remove image"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {images.length === 0 && (
+        <div className="flex items-center gap-2 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl">
+          <ImageIcon className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+          <p className="bangla text-xs text-amber-700 dark:text-amber-400">
+            কমপক্ষে একটি ছবি যোগ করুন। প্রথম ছবিটি মূল ছবি হিসেবে দেখাবে।
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ===== Main Dashboard =====
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>('overview');
@@ -30,8 +165,6 @@ export default function AdminDashboard() {
   const [editProduct, setEditProduct] = useState<Product | null>(null);
   const [newProduct, setNewProduct] = useState<Omit<Product, 'id' | 'createdAt'>>(EMPTY_PRODUCT);
   const [showAddProduct, setShowAddProduct] = useState(false);
-  const [newImgUrl, setNewImgUrl] = useState('');
-  const [editImgUrl, setEditImgUrl] = useState('');
   const [newAnnouncement, setNewAnnouncement] = useState({ text: '', textBn: '', type: 'info' as Announcement['type'] });
   const [showAddAnn, setShowAddAnn] = useState(false);
 
@@ -57,6 +190,8 @@ export default function AdminDashboard() {
     if (!newProduct.nameBn.trim()) { toast.error('বাংলায় পণ্যের নাম দিন।'); return; }
     if (!newProduct.name.trim()) { toast.error('English name required.'); return; }
     if (newProduct.price <= 0) { toast.error('সঠিক মূল্য দিন।'); return; }
+    if (newProduct.images.length === 0) { toast.error('কমপক্ষে একটি ছবি যোগ করুন।'); return; }
+
     const p: Product = {
       ...newProduct,
       id: generateId(),
@@ -66,8 +201,7 @@ export default function AdminDashboard() {
     refresh();
     setShowAddProduct(false);
     setNewProduct({ ...EMPTY_PRODUCT });
-    setNewImgUrl('');
-    toast.success('✅ পণ্য সফলভাবে যোগ করা হয়েছে!');
+    toast.success('✅ পণ্য সফলভাবে যোগ করা হয়েছে! হোমপেজে দেখা যাবে।');
   };
 
   const handleUpdateProduct = () => {
@@ -78,7 +212,6 @@ export default function AdminDashboard() {
     updateProduct(editProduct);
     refresh();
     setEditProduct(null);
-    setEditImgUrl('');
     toast.success('✅ পণ্য আপডেট হয়েছে!');
   };
 
@@ -137,7 +270,7 @@ export default function AdminDashboard() {
     { id: 'announcements', label: 'ঘোষণা', icon: <Megaphone className="w-4 h-4" /> },
   ];
 
-  const inputCls = "w-full px-3 py-2.5 rounded-xl border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary bangla placeholder:text-muted-foreground";
+  const inputCls = "w-full px-3 py-2.5 rounded-xl border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary bangla placeholder:text-muted-foreground transition-all";
 
   const statusColors: Record<Order['status'], string> = {
     pending: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
@@ -182,6 +315,11 @@ export default function AdminDashboard() {
             <RefreshCw className="w-4 h-4" />
             <span className="hidden md:block">রিফ্রেশ</span>
           </button>
+          <a href="/" target="_blank"
+            className="w-full flex items-center gap-3 px-2 md:px-3 py-2.5 rounded-xl text-slate-400 hover:bg-slate-700 hover:text-cyan-400 transition-all bangla text-sm mb-1">
+            <span className="text-base">🌐</span>
+            <span className="hidden md:block">ওয়েবসাইট দেখুন</span>
+          </a>
           <button onClick={handleLogout}
             className="w-full flex items-center gap-3 px-2 md:px-3 py-2.5 rounded-xl text-slate-400 hover:bg-red-900/30 hover:text-red-400 transition-all bangla text-sm">
             <LogOut className="w-4 h-4" />
@@ -233,6 +371,37 @@ export default function AdminDashboard() {
                   </div>
                 ))}
               </div>
+
+              {/* Quick Actions */}
+              <div className="grid sm:grid-cols-2 gap-4">
+                <button
+                  onClick={() => { setTab('products'); setShowAddProduct(true); setNewProduct({ ...EMPTY_PRODUCT }); }}
+                  className="glass-card rounded-2xl p-5 flex items-center gap-4 hover:shadow-lg transition-all duration-200 hover:-translate-y-0.5 text-left group cursor-pointer border-2 border-transparent hover:border-primary/30"
+                >
+                  <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center group-hover:bg-primary transition-colors duration-200">
+                    <Plus className="w-6 h-6 text-primary group-hover:text-white transition-colors" />
+                  </div>
+                  <div>
+                    <p className="bangla font-bold text-base">নতুন পণ্য যোগ করুন</p>
+                    <p className="bangla text-xs text-muted-foreground mt-0.5">ছবি আপলোড করে পণ্য যোগ করুন</p>
+                  </div>
+                </button>
+                <button
+                  onClick={() => setTab('orders')}
+                  className="glass-card rounded-2xl p-5 flex items-center gap-4 hover:shadow-lg transition-all duration-200 hover:-translate-y-0.5 text-left group cursor-pointer border-2 border-transparent hover:border-secondary/30"
+                >
+                  <div className="w-12 h-12 rounded-2xl bg-secondary/10 flex items-center justify-center group-hover:bg-secondary transition-colors duration-200">
+                    <ShoppingBag className="w-6 h-6 text-secondary group-hover:text-white transition-colors" />
+                  </div>
+                  <div>
+                    <p className="bangla font-bold text-base">অর্ডার পরিচালনা</p>
+                    <p className="bangla text-xs text-muted-foreground mt-0.5">
+                      {pendingOrders > 0 ? `${pendingOrders}টি অপেক্ষমাণ অর্ডার` : 'সব অর্ডার দেখুন'}
+                    </p>
+                  </div>
+                </button>
+              </div>
+
               {/* Recent Orders */}
               <div className="glass-card rounded-2xl p-5">
                 <h3 className="bangla font-bold mb-4 text-base">সাম্প্রতিক অর্ডার</h3>
@@ -279,8 +448,14 @@ export default function AdminDashboard() {
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     {products.slice(0, 4).map(p => (
                       <div key={p.id} className="bg-muted/50 rounded-xl p-3 text-center">
-                        <img src={p.images[0] || 'https://via.placeholder.com/80'} alt={p.nameBn}
-                          className="w-12 h-12 rounded-lg object-cover mx-auto mb-2" />
+                        <img
+                          src={p.images[0] || 'https://images.unsplash.com/photo-1560393464-5c69a73c5770?w=80'}
+                          alt={p.nameBn}
+                          className="w-14 h-14 rounded-xl object-cover mx-auto mb-2 border border-border"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1560393464-5c69a73c5770?w=80';
+                          }}
+                        />
                         <p className="bangla text-xs font-semibold line-clamp-1">{p.nameBn}</p>
                         <p className="text-primary font-bold text-sm">{formatPriceEn(p.price)}</p>
                       </div>
@@ -296,7 +471,7 @@ export default function AdminDashboard() {
             <div className="space-y-5 animate-fade-in-up">
               <div className="flex items-center justify-between">
                 <p className="bangla text-sm text-muted-foreground">মোট <strong>{products.length}</strong>টি পণ্য</p>
-                <button onClick={() => { setShowAddProduct(true); setNewProduct({ ...EMPTY_PRODUCT }); setNewImgUrl(''); }}
+                <button onClick={() => { setShowAddProduct(true); setNewProduct({ ...EMPTY_PRODUCT }); }}
                   className="btn-primary text-white px-4 py-2.5 rounded-xl font-semibold bangla flex items-center gap-2 text-sm">
                   <Plus className="w-4 h-4" /> নতুন পণ্য যোগ করুন
                 </button>
@@ -304,131 +479,105 @@ export default function AdminDashboard() {
 
               {/* Add Product Modal */}
               {showAddProduct && (
-                <div className="fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4">
-                  <div className="bg-background rounded-3xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl animate-scale-in border border-border">
+                <div className="fixed inset-0 modal-overlay z-50 flex items-start justify-center p-4 overflow-y-auto">
+                  <div className="bg-background rounded-3xl p-6 w-full max-w-2xl my-8 shadow-2xl animate-scale-in border border-border">
                     <div className="flex items-center justify-between mb-6">
-                      <h3 className="bangla font-bold text-lg">নতুন পণ্য যোগ করুন</h3>
+                      <div>
+                        <h3 className="bangla font-bold text-lg">নতুন পণ্য যোগ করুন</h3>
+                        <p className="bangla text-xs text-muted-foreground mt-0.5">পণ্যের তথ্য পূরণ করুন এবং ছবি আপলোড করুন</p>
+                      </div>
                       <button onClick={() => setShowAddProduct(false)}
                         className="p-2 rounded-full hover:bg-muted transition-colors">
                         <X className="w-5 h-5" />
                       </button>
                     </div>
-                    <div className="grid sm:grid-cols-2 gap-4">
+                    <div className="space-y-5">
+                      {/* Image Upload First */}
                       <div>
-                        <label className="bangla text-sm font-semibold mb-1.5 block">পণ্যের নাম (বাংলা) *</label>
-                        <input value={newProduct.nameBn}
-                          onChange={e => setNewProduct({ ...newProduct, nameBn: e.target.value })}
-                          className={inputCls} placeholder="যেমন: নীল টি-শার্ট" />
-                      </div>
-                      <div>
-                        <label className="bangla text-sm font-semibold mb-1.5 block">Product Name (English) *</label>
-                        <input value={newProduct.name}
-                          onChange={e => setNewProduct({ ...newProduct, name: e.target.value })}
-                          className={inputCls} placeholder="e.g: Blue T-Shirt" />
-                      </div>
-                      <div>
-                        <label className="bangla text-sm font-semibold mb-1.5 block">মূল্য (৳) *</label>
-                        <input type="number" value={newProduct.price || ''}
-                          onChange={e => setNewProduct({ ...newProduct, price: Number(e.target.value) })}
-                          className={inputCls} placeholder="0" min="0" />
-                      </div>
-                      <div>
-                        <label className="bangla text-sm font-semibold mb-1.5 block">আসল মূল্য (৳) — ছাড় দেখাতে</label>
-                        <input type="number" value={newProduct.originalPrice || ''}
-                          onChange={e => setNewProduct({ ...newProduct, originalPrice: Number(e.target.value) || undefined })}
-                          className={inputCls} placeholder="0 (ঐচ্ছিক)" min="0" />
-                      </div>
-                      <div>
-                        <label className="bangla text-sm font-semibold mb-1.5 block">বিভাগ *</label>
-                        <select value={newProduct.category}
-                          onChange={e => setNewProduct({ ...newProduct, category: e.target.value })}
-                          className={`${inputCls} cursor-pointer`}>
-                          {CATEGORIES.filter(c => c.id !== 'all').map(c => (
-                            <option key={c.id} value={c.id}>{c.icon} {c.nameBn}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="bangla text-sm font-semibold mb-1.5 block">স্টক পরিমাণ</label>
-                        <input type="number" value={newProduct.stock}
-                          onChange={e => setNewProduct({ ...newProduct, stock: Number(e.target.value) })}
-                          className={inputCls} min="0" />
-                      </div>
-                      <div>
-                        <label className="bangla text-sm font-semibold mb-1.5 block">ব্যাজ</label>
-                        <select value={newProduct.badge || ''}
-                          onChange={e => setNewProduct({ ...newProduct, badge: (e.target.value as Product['badge']) || undefined })}
-                          className={`${inputCls} cursor-pointer`}>
-                          <option value="">কোনো ব্যাজ নেই</option>
-                          <option value="new">🆕 নতুন (New)</option>
-                          <option value="hot">🔥 হট (Hot)</option>
-                          <option value="sale">🏷️ সেল (Sale)</option>
-                        </select>
-                      </div>
-                      <div className="flex items-center gap-3 pt-4">
-                        <input type="checkbox" id="featuredNew" checked={newProduct.featured}
-                          onChange={e => setNewProduct({ ...newProduct, featured: e.target.checked })}
-                          className="w-5 h-5 accent-primary rounded cursor-pointer" />
-                        <label htmlFor="featuredNew" className="bangla text-sm font-medium cursor-pointer">
-                          ⭐ হোমপেজে ফিচার্ড হিসেবে দেখাবে
+                        <label className="bangla text-sm font-semibold mb-2 block flex items-center gap-1.5">
+                          <ImageIcon className="w-4 h-4 text-primary" />
+                          পণ্যের ছবি আপলোড করুন *
                         </label>
+                        <ImageUploader
+                          images={newProduct.images}
+                          onImagesChange={(imgs) => setNewProduct({ ...newProduct, images: imgs })}
+                        />
                       </div>
-                      <div className="sm:col-span-2">
-                        <label className="bangla text-sm font-semibold mb-1.5 block">বিবরণ (বাংলা)</label>
-                        <textarea value={newProduct.descriptionBn}
-                          onChange={e => setNewProduct({ ...newProduct, descriptionBn: e.target.value })}
-                          rows={2} className={`${inputCls} resize-none`}
-                          placeholder="পণ্যের বিস্তারিত বিবরণ..." />
-                      </div>
-                      <div className="sm:col-span-2">
-                        <label className="bangla text-sm font-semibold mb-1.5 block">Description (English)</label>
-                        <textarea value={newProduct.description}
-                          onChange={e => setNewProduct({ ...newProduct, description: e.target.value })}
-                          rows={2} className={`${inputCls} resize-none`}
-                          placeholder="Product description..." />
-                      </div>
-                      <div className="sm:col-span-2">
-                        <label className="bangla text-sm font-semibold mb-1.5 block">পণ্যের ছবির URL যোগ করুন</label>
-                        <div className="flex gap-2 mb-3">
-                          <input value={newImgUrl} onChange={e => setNewImgUrl(e.target.value)}
-                            placeholder="https://example.com/image.jpg"
-                            className={`flex-1 ${inputCls}`}
-                            onKeyDown={e => {
-                              if (e.key === 'Enter' && newImgUrl.trim()) {
-                                setNewProduct({ ...newProduct, images: [...newProduct.images, newImgUrl.trim()] });
-                                setNewImgUrl('');
-                              }
-                            }} />
-                          <button
-                            onClick={() => {
-                              if (newImgUrl.trim()) {
-                                setNewProduct({ ...newProduct, images: [...newProduct.images, newImgUrl.trim()] });
-                                setNewImgUrl('');
-                              }
-                            }}
-                            className="px-4 py-2.5 bg-primary text-white rounded-xl text-sm font-semibold hover:bg-primary/90 transition-colors flex items-center gap-1">
-                            <Plus className="w-4 h-4" /> যোগ
-                          </button>
+
+                      <div className="grid sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="bangla text-sm font-semibold mb-1.5 block">পণ্যের নাম (বাংলা) *</label>
+                          <input value={newProduct.nameBn}
+                            onChange={e => setNewProduct({ ...newProduct, nameBn: e.target.value })}
+                            className={inputCls} placeholder="যেমন: নীল টি-শার্ট" />
                         </div>
-                        {newProduct.images.length > 0 && (
-                          <div className="flex flex-wrap gap-2">
-                            {newProduct.images.map((img, i) => (
-                              <div key={i} className="relative w-16 h-16 group">
-                                <img src={img} alt="" className="w-full h-full object-cover rounded-xl border border-border" />
-                                <button
-                                  onClick={() => setNewProduct({ ...newProduct, images: newProduct.images.filter((_, j) => j !== i) })}
-                                  className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center shadow-md">
-                                  <X className="w-3 h-3" />
-                                </button>
-                              </div>
+                        <div>
+                          <label className="bangla text-sm font-semibold mb-1.5 block">Product Name (English) *</label>
+                          <input value={newProduct.name}
+                            onChange={e => setNewProduct({ ...newProduct, name: e.target.value })}
+                            className={inputCls} placeholder="e.g: Blue T-Shirt" />
+                        </div>
+                        <div>
+                          <label className="bangla text-sm font-semibold mb-1.5 block">মূল্য (৳) *</label>
+                          <input type="number" value={newProduct.price || ''}
+                            onChange={e => setNewProduct({ ...newProduct, price: Number(e.target.value) })}
+                            className={inputCls} placeholder="0" min="0" />
+                        </div>
+                        <div>
+                          <label className="bangla text-sm font-semibold mb-1.5 block">আসল মূল্য (৳) — ছাড় দেখাতে</label>
+                          <input type="number" value={newProduct.originalPrice || ''}
+                            onChange={e => setNewProduct({ ...newProduct, originalPrice: Number(e.target.value) || undefined })}
+                            className={inputCls} placeholder="0 (ঐচ্ছিক)" min="0" />
+                        </div>
+                        <div>
+                          <label className="bangla text-sm font-semibold mb-1.5 block">বিভাগ *</label>
+                          <select value={newProduct.category}
+                            onChange={e => setNewProduct({ ...newProduct, category: e.target.value })}
+                            className={`${inputCls} cursor-pointer`}>
+                            {CATEGORIES.filter(c => c.id !== 'all').map(c => (
+                              <option key={c.id} value={c.id}>{c.icon} {c.nameBn}</option>
                             ))}
-                          </div>
-                        )}
-                        {newProduct.images.length === 0 && (
-                          <p className="bangla text-xs text-muted-foreground mt-1">
-                            ছবির URL পেস্ট করে "যোগ" বোতামে ক্লিক করুন (একাধিক ছবি যোগ করা যাবে)
-                          </p>
-                        )}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="bangla text-sm font-semibold mb-1.5 block">স্টক পরিমাণ</label>
+                          <input type="number" value={newProduct.stock}
+                            onChange={e => setNewProduct({ ...newProduct, stock: Number(e.target.value) })}
+                            className={inputCls} min="0" />
+                        </div>
+                        <div>
+                          <label className="bangla text-sm font-semibold mb-1.5 block">ব্যাজ</label>
+                          <select value={newProduct.badge || ''}
+                            onChange={e => setNewProduct({ ...newProduct, badge: (e.target.value as Product['badge']) || undefined })}
+                            className={`${inputCls} cursor-pointer`}>
+                            <option value="">কোনো ব্যাজ নেই</option>
+                            <option value="new">🆕 নতুন (New)</option>
+                            <option value="hot">🔥 হট (Hot)</option>
+                            <option value="sale">🏷️ সেল (Sale)</option>
+                          </select>
+                        </div>
+                        <div className="flex items-center gap-3 pt-2">
+                          <input type="checkbox" id="featuredNew" checked={newProduct.featured}
+                            onChange={e => setNewProduct({ ...newProduct, featured: e.target.checked })}
+                            className="w-5 h-5 accent-primary rounded cursor-pointer" />
+                          <label htmlFor="featuredNew" className="bangla text-sm font-medium cursor-pointer">
+                            ⭐ হোমপেজে ফিচার্ড হিসেবে দেখাবে
+                          </label>
+                        </div>
+                        <div className="sm:col-span-2">
+                          <label className="bangla text-sm font-semibold mb-1.5 block">বিবরণ (বাংলা)</label>
+                          <textarea value={newProduct.descriptionBn}
+                            onChange={e => setNewProduct({ ...newProduct, descriptionBn: e.target.value })}
+                            rows={2} className={`${inputCls} resize-none`}
+                            placeholder="পণ্যের বিস্তারিত বিবরণ..." />
+                        </div>
+                        <div className="sm:col-span-2">
+                          <label className="bangla text-sm font-semibold mb-1.5 block">Description (English)</label>
+                          <textarea value={newProduct.description}
+                            onChange={e => setNewProduct({ ...newProduct, description: e.target.value })}
+                            rows={2} className={`${inputCls} resize-none`}
+                            placeholder="Product description..." />
+                        </div>
                       </div>
                     </div>
                     <div className="flex gap-3 mt-6">
@@ -447,120 +596,107 @@ export default function AdminDashboard() {
 
               {/* Edit Product Modal */}
               {editProduct && (
-                <div className="fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4">
-                  <div className="bg-background rounded-3xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl animate-scale-in border border-border">
+                <div className="fixed inset-0 modal-overlay z-50 flex items-start justify-center p-4 overflow-y-auto">
+                  <div className="bg-background rounded-3xl p-6 w-full max-w-2xl my-8 shadow-2xl animate-scale-in border border-border">
                     <div className="flex items-center justify-between mb-6">
-                      <h3 className="bangla font-bold text-lg">পণ্য সম্পাদনা করুন</h3>
-                      <button onClick={() => { setEditProduct(null); setEditImgUrl(''); }}
+                      <div>
+                        <h3 className="bangla font-bold text-lg">পণ্য সম্পাদনা করুন</h3>
+                        <p className="bangla text-xs text-muted-foreground mt-0.5">{editProduct.nameBn}</p>
+                      </div>
+                      <button onClick={() => setEditProduct(null)}
                         className="p-2 rounded-full hover:bg-muted transition-colors">
                         <X className="w-5 h-5" />
                       </button>
                     </div>
-                    <div className="grid sm:grid-cols-2 gap-4">
+                    <div className="space-y-5">
+                      {/* Image Upload */}
                       <div>
-                        <label className="bangla text-sm font-semibold mb-1.5 block">পণ্যের নাম (বাংলা)</label>
-                        <input value={editProduct.nameBn}
-                          onChange={e => setEditProduct({ ...editProduct, nameBn: e.target.value })}
-                          className={inputCls} />
-                      </div>
-                      <div>
-                        <label className="bangla text-sm font-semibold mb-1.5 block">Product Name (English)</label>
-                        <input value={editProduct.name}
-                          onChange={e => setEditProduct({ ...editProduct, name: e.target.value })}
-                          className={inputCls} />
-                      </div>
-                      <div>
-                        <label className="bangla text-sm font-semibold mb-1.5 block">মূল্য (৳)</label>
-                        <input type="number" value={editProduct.price}
-                          onChange={e => setEditProduct({ ...editProduct, price: Number(e.target.value) })}
-                          className={inputCls} min="0" />
-                      </div>
-                      <div>
-                        <label className="bangla text-sm font-semibold mb-1.5 block">আসল মূল্য (৳)</label>
-                        <input type="number" value={editProduct.originalPrice || ''}
-                          onChange={e => setEditProduct({ ...editProduct, originalPrice: Number(e.target.value) || undefined })}
-                          className={inputCls} min="0" />
-                      </div>
-                      <div>
-                        <label className="bangla text-sm font-semibold mb-1.5 block">বিভাগ</label>
-                        <select value={editProduct.category}
-                          onChange={e => setEditProduct({ ...editProduct, category: e.target.value })}
-                          className={`${inputCls} cursor-pointer`}>
-                          {CATEGORIES.filter(c => c.id !== 'all').map(c => (
-                            <option key={c.id} value={c.id}>{c.icon} {c.nameBn}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="bangla text-sm font-semibold mb-1.5 block">স্টক</label>
-                        <input type="number" value={editProduct.stock}
-                          onChange={e => setEditProduct({ ...editProduct, stock: Number(e.target.value) })}
-                          className={inputCls} min="0" />
-                      </div>
-                      <div>
-                        <label className="bangla text-sm font-semibold mb-1.5 block">ব্যাজ</label>
-                        <select value={editProduct.badge || ''}
-                          onChange={e => setEditProduct({ ...editProduct, badge: (e.target.value as Product['badge']) || undefined })}
-                          className={`${inputCls} cursor-pointer`}>
-                          <option value="">কোনো ব্যাজ নেই</option>
-                          <option value="new">🆕 নতুন</option>
-                          <option value="hot">🔥 হট</option>
-                          <option value="sale">🏷️ সেল</option>
-                        </select>
-                      </div>
-                      <div className="flex items-center gap-3 pt-4">
-                        <input type="checkbox" id="featuredEdit" checked={editProduct.featured}
-                          onChange={e => setEditProduct({ ...editProduct, featured: e.target.checked })}
-                          className="w-5 h-5 accent-primary rounded cursor-pointer" />
-                        <label htmlFor="featuredEdit" className="bangla text-sm font-medium cursor-pointer">
-                          ⭐ হোমপেজে ফিচার্ড হিসেবে দেখাবে
+                        <label className="bangla text-sm font-semibold mb-2 block flex items-center gap-1.5">
+                          <ImageIcon className="w-4 h-4 text-primary" />
+                          পণ্যের ছবি পরিবর্তন করুন
                         </label>
+                        <ImageUploader
+                          images={editProduct.images}
+                          onImagesChange={(imgs) => setEditProduct({ ...editProduct, images: imgs })}
+                        />
                       </div>
-                      <div className="sm:col-span-2">
-                        <label className="bangla text-sm font-semibold mb-1.5 block">বিবরণ (বাংলা)</label>
-                        <textarea value={editProduct.descriptionBn}
-                          onChange={e => setEditProduct({ ...editProduct, descriptionBn: e.target.value })}
-                          rows={2} className={`${inputCls} resize-none`} />
-                      </div>
-                      <div className="sm:col-span-2">
-                        <label className="bangla text-sm font-semibold mb-1.5 block">ছবির URL যোগ করুন</label>
-                        <div className="flex gap-2 mb-3">
-                          <input value={editImgUrl} onChange={e => setEditImgUrl(e.target.value)}
-                            placeholder="https://example.com/image.jpg"
-                            className={`flex-1 ${inputCls}`}
-                            onKeyDown={e => {
-                              if (e.key === 'Enter' && editImgUrl.trim()) {
-                                setEditProduct({ ...editProduct, images: [...editProduct.images, editImgUrl.trim()] });
-                                setEditImgUrl('');
-                              }
-                            }} />
-                          <button
-                            onClick={() => {
-                              if (editImgUrl.trim()) {
-                                setEditProduct({ ...editProduct, images: [...editProduct.images, editImgUrl.trim()] });
-                                setEditImgUrl('');
-                              }
-                            }}
-                            className="px-4 py-2.5 bg-primary text-white rounded-xl text-sm font-semibold hover:bg-primary/90 transition-colors flex items-center gap-1">
-                            <Plus className="w-4 h-4" /> যোগ
-                          </button>
+
+                      <div className="grid sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="bangla text-sm font-semibold mb-1.5 block">পণ্যের নাম (বাংলা)</label>
+                          <input value={editProduct.nameBn}
+                            onChange={e => setEditProduct({ ...editProduct, nameBn: e.target.value })}
+                            className={inputCls} />
                         </div>
-                        <div className="flex flex-wrap gap-2">
-                          {editProduct.images.map((img, i) => (
-                            <div key={i} className="relative w-16 h-16 group">
-                              <img src={img} alt="" className="w-full h-full object-cover rounded-xl border border-border" />
-                              <button
-                                onClick={() => setEditProduct({ ...editProduct, images: editProduct.images.filter((_, j) => j !== i) })}
-                                className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center shadow-md">
-                                <X className="w-3 h-3" />
-                              </button>
-                            </div>
-                          ))}
+                        <div>
+                          <label className="bangla text-sm font-semibold mb-1.5 block">Product Name (English)</label>
+                          <input value={editProduct.name}
+                            onChange={e => setEditProduct({ ...editProduct, name: e.target.value })}
+                            className={inputCls} />
+                        </div>
+                        <div>
+                          <label className="bangla text-sm font-semibold mb-1.5 block">মূল্য (৳)</label>
+                          <input type="number" value={editProduct.price}
+                            onChange={e => setEditProduct({ ...editProduct, price: Number(e.target.value) })}
+                            className={inputCls} min="0" />
+                        </div>
+                        <div>
+                          <label className="bangla text-sm font-semibold mb-1.5 block">আসল মূল্য (৳)</label>
+                          <input type="number" value={editProduct.originalPrice || ''}
+                            onChange={e => setEditProduct({ ...editProduct, originalPrice: Number(e.target.value) || undefined })}
+                            className={inputCls} min="0" />
+                        </div>
+                        <div>
+                          <label className="bangla text-sm font-semibold mb-1.5 block">বিভাগ</label>
+                          <select value={editProduct.category}
+                            onChange={e => setEditProduct({ ...editProduct, category: e.target.value })}
+                            className={`${inputCls} cursor-pointer`}>
+                            {CATEGORIES.filter(c => c.id !== 'all').map(c => (
+                              <option key={c.id} value={c.id}>{c.icon} {c.nameBn}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="bangla text-sm font-semibold mb-1.5 block">স্টক</label>
+                          <input type="number" value={editProduct.stock}
+                            onChange={e => setEditProduct({ ...editProduct, stock: Number(e.target.value) })}
+                            className={inputCls} min="0" />
+                        </div>
+                        <div>
+                          <label className="bangla text-sm font-semibold mb-1.5 block">ব্যাজ</label>
+                          <select value={editProduct.badge || ''}
+                            onChange={e => setEditProduct({ ...editProduct, badge: (e.target.value as Product['badge']) || undefined })}
+                            className={`${inputCls} cursor-pointer`}>
+                            <option value="">কোনো ব্যাজ নেই</option>
+                            <option value="new">🆕 নতুন</option>
+                            <option value="hot">🔥 হট</option>
+                            <option value="sale">🏷️ সেল</option>
+                          </select>
+                        </div>
+                        <div className="flex items-center gap-3 pt-2">
+                          <input type="checkbox" id="featuredEdit" checked={editProduct.featured}
+                            onChange={e => setEditProduct({ ...editProduct, featured: e.target.checked })}
+                            className="w-5 h-5 accent-primary rounded cursor-pointer" />
+                          <label htmlFor="featuredEdit" className="bangla text-sm font-medium cursor-pointer">
+                            ⭐ হোমপেজে ফিচার্ড হিসেবে দেখাবে
+                          </label>
+                        </div>
+                        <div className="sm:col-span-2">
+                          <label className="bangla text-sm font-semibold mb-1.5 block">বিবরণ (বাংলা)</label>
+                          <textarea value={editProduct.descriptionBn}
+                            onChange={e => setEditProduct({ ...editProduct, descriptionBn: e.target.value })}
+                            rows={2} className={`${inputCls} resize-none`} />
+                        </div>
+                        <div className="sm:col-span-2">
+                          <label className="bangla text-sm font-semibold mb-1.5 block">Description (English)</label>
+                          <textarea value={editProduct.description}
+                            onChange={e => setEditProduct({ ...editProduct, description: e.target.value })}
+                            rows={2} className={`${inputCls} resize-none`} />
                         </div>
                       </div>
                     </div>
                     <div className="flex gap-3 mt-6">
-                      <button onClick={() => { setEditProduct(null); setEditImgUrl(''); }}
+                      <button onClick={() => setEditProduct(null)}
                         className="flex-1 py-3 rounded-xl border border-border bangla font-semibold hover:bg-muted transition-colors">
                         বাতিল
                       </button>
@@ -578,35 +714,49 @@ export default function AdminDashboard() {
                 <div className="text-center py-20">
                   <Package className="w-16 h-16 text-muted-foreground/20 mx-auto mb-4" />
                   <p className="bangla text-muted-foreground text-lg mb-2">কোনো পণ্য যোগ করা হয়নি।</p>
-                  <p className="bangla text-muted-foreground text-sm">উপরের বোতামে ক্লিক করে পণ্য যোগ করুন।</p>
+                  <p className="bangla text-muted-foreground text-sm mb-4">উপরের বোতামে ক্লিক করে পণ্য যোগ করুন।</p>
+                  <button
+                    onClick={() => { setShowAddProduct(true); setNewProduct({ ...EMPTY_PRODUCT }); }}
+                    className="btn-primary text-white px-6 py-3 rounded-xl font-semibold bangla inline-flex items-center gap-2"
+                  >
+                    <Plus className="w-4 h-4" /> প্রথম পণ্য যোগ করুন
+                  </button>
                 </div>
               ) : (
                 <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                   {products.map(p => (
-                    <div key={p.id} className="glass-card rounded-2xl overflow-hidden hover:shadow-lg transition-shadow">
+                    <div key={p.id} className="glass-card rounded-2xl overflow-hidden hover:shadow-lg transition-all duration-200 hover:-translate-y-0.5">
                       <div className="aspect-square bg-muted relative overflow-hidden">
                         <img
                           src={p.images[0] || 'https://images.unsplash.com/photo-1560393464-5c69a73c5770?w=300'}
                           alt={p.nameBn}
                           className="w-full h-full object-cover"
-                          onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1560393464-5c69a73c5770?w=300'; }}
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1560393464-5c69a73c5770?w=300';
+                          }}
                         />
                         {p.featured && (
-                          <span className="absolute top-2 left-2 px-2 py-0.5 bg-primary text-white text-xs rounded-full bangla font-semibold">
+                          <span className="absolute top-2 left-2 px-2 py-0.5 bg-primary text-white text-xs rounded-full bangla font-semibold shadow-md">
                             ⭐ ফিচার্ড
                           </span>
                         )}
                         {p.badge && (
                           <span className={cn(
-                            "absolute top-2 right-2 px-2 py-0.5 text-white text-xs rounded-full font-semibold",
+                            "absolute top-2 right-2 px-2 py-0.5 text-white text-xs rounded-full font-semibold shadow-md",
                             p.badge === 'new' ? 'badge-new' : p.badge === 'hot' ? 'badge-hot' : 'badge-sale'
                           )}>
                             {p.badge === 'new' ? 'NEW' : p.badge === 'hot' ? 'HOT' : 'SALE'}
                           </span>
                         )}
+                        {p.images.length > 1 && (
+                          <span className="absolute bottom-2 right-2 px-2 py-0.5 bg-black/60 text-white text-xs rounded-full">
+                            +{p.images.length - 1} ছবি
+                          </span>
+                        )}
                       </div>
                       <div className="p-3 space-y-2">
                         <h4 className="bangla font-semibold text-sm line-clamp-1">{p.nameBn}</h4>
+                        <p className="text-xs text-muted-foreground line-clamp-1">{p.name}</p>
                         <div className="flex items-center justify-between">
                           <span className="text-primary font-bold text-base">{formatPriceEn(p.price)}</span>
                           <span className="bangla text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
@@ -614,7 +764,7 @@ export default function AdminDashboard() {
                           </span>
                         </div>
                         <div className="flex gap-2">
-                          <button onClick={() => { setEditProduct({ ...p }); setEditImgUrl(''); }}
+                          <button onClick={() => setEditProduct({ ...p })}
                             className="flex-1 py-2 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-xl text-xs font-semibold bangla flex items-center justify-center gap-1 hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors">
                             <Edit3 className="w-3 h-3" /> সম্পাদনা
                           </button>
@@ -654,7 +804,7 @@ export default function AdminDashboard() {
                       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-4">
                         <div className="flex-1 min-w-0">
                           <div className="flex flex-wrap items-center gap-2 mb-1.5">
-                            <span className="text-xs text-muted-foreground font-mono">
+                            <span className="text-xs text-muted-foreground font-mono bg-muted px-2 py-0.5 rounded">
                               #{order.id.slice(-8).toUpperCase()}
                             </span>
                             <span className={`bangla px-2.5 py-0.5 rounded-full text-xs font-semibold ${statusColors[order.status]}`}>
@@ -665,15 +815,20 @@ export default function AdminDashboard() {
                                 ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
                                 : 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-400'
                             }`}>
-                              {order.paymentMethod === 'cod' ? '💵 COD' : '💳 বিকাশ'}
+                              {order.paymentMethod === 'cod' ? '💵 ক্যাশ-অন' : '💳 বিকাশ'}
                             </span>
                           </div>
                           <h4 className="bangla font-bold text-base">{order.customer.name}</h4>
                           <p className="text-sm text-muted-foreground">{order.customer.phone}</p>
                           <p className="bangla text-sm text-muted-foreground">{order.customer.address}, {order.customer.upazila}, {order.customer.district}</p>
                           {order.bkashTransactionId && (
-                            <p className="text-xs text-pink-600 mt-1">
+                            <p className="text-xs text-pink-600 mt-1 font-medium">
                               বিকাশ Txn: <strong>{order.bkashTransactionId}</strong>
+                            </p>
+                          )}
+                          {order.notes && (
+                            <p className="bangla text-xs text-muted-foreground bg-muted/50 px-3 py-1.5 rounded-lg mt-2">
+                              📝 {order.notes}
                             </p>
                           )}
                         </div>
@@ -695,12 +850,6 @@ export default function AdminDashboard() {
                           </span>
                         ))}
                       </div>
-
-                      {order.notes && (
-                        <p className="bangla text-xs text-muted-foreground bg-muted/50 px-3 py-2 rounded-xl mb-3">
-                          📝 নোট: {order.notes}
-                        </p>
-                      )}
 
                       {/* Status Update Buttons */}
                       <div>
