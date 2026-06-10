@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Package, ShoppingBag, Megaphone, LogOut, Plus, Trash2,
-  Edit3, Save, X, Bell, AlertCircle, TrendingUp, RefreshCw, Upload, ImageIcon
+  Edit3, Save, X, Bell, AlertCircle, TrendingUp, RefreshCw, Upload, ImageIcon, Tag
 } from 'lucide-react';
 import {
   getProducts, addProduct, updateProduct, deleteProduct,
@@ -10,7 +10,7 @@ import {
   deleteAnnouncement, getAdminAuth, clearAdminAuth
 } from '@/lib/storage';
 import { Product, Order, Announcement } from '@/types';
-import { CATEGORIES, LOGO_URL } from '@/constants';
+import { CATEGORIES, LOGO_URL, CLOTHING_SIZES, CAP_SIZES, WATCH_SIZES, SUNGLASS_SIZES } from '@/constants';
 import { generateId, formatPriceEn, formatDateEn, cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -19,7 +19,21 @@ type Tab = 'overview' | 'products' | 'orders' | 'announcements';
 const EMPTY_PRODUCT: Omit<Product, 'id' | 'createdAt'> = {
   name: '', nameBn: '', price: 0, category: 'cap', images: [],
   description: '', descriptionBn: '', stock: 10, featured: false,
+  sizes: [], colors: [],
 };
+
+// Get default sizes based on category
+function getDefaultSizes(category: string): string[] {
+  switch (category) {
+    case 'cap': return CAP_SIZES;
+    case 'watch': return WATCH_SIZES;
+    case 'sunglasses': return SUNGLASS_SIZES;
+    case 'tshirt':
+    case 'drop-shoulder':
+    case 'jersey': return CLOTHING_SIZES;
+    default: return [];
+  }
+}
 
 // ===== Image Upload Component =====
 interface ImageUploaderProps {
@@ -75,14 +89,13 @@ function ImageUploader({ images, onImagesChange }: ImageUploaderProps) {
 
   return (
     <div className="space-y-3">
-      {/* Upload Area */}
       <div
         onClick={() => fileInputRef.current?.click()}
         onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
         onDragLeave={() => setDragOver(false)}
         onDrop={handleDrop}
         className={cn(
-          "border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all duration-200",
+          "border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all duration-200 select-none",
           dragOver
             ? "border-primary bg-primary/10 scale-[1.01]"
             : "border-border hover:border-primary/60 hover:bg-primary/5"
@@ -115,26 +128,19 @@ function ImageUploader({ images, onImagesChange }: ImageUploaderProps) {
           </div>
         )}
       </div>
-
-      {/* Image Previews */}
       {images.length > 0 && (
         <div className="flex flex-wrap gap-3">
           {images.map((img, i) => (
             <div key={i} className="relative w-20 h-20 group rounded-xl overflow-hidden border-2 border-border shadow-sm">
-              <img
-                src={img}
-                alt={`পণ্যের ছবি ${i + 1}`}
-                className="w-full h-full object-cover"
-              />
+              <img src={img} alt={`পণ্যের ছবি ${i + 1}`} className="w-full h-full object-cover" />
               {i === 0 && (
                 <span className="absolute bottom-0 left-0 right-0 bg-primary/80 text-white text-[9px] font-bold text-center py-0.5 bangla">
                   মূল ছবি
                 </span>
               )}
               <button
-                onClick={() => removeImage(i)}
+                onClick={(e) => { e.stopPropagation(); removeImage(i); }}
                 className="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
-                title="Remove image"
               >
                 <X className="w-3 h-3" />
               </button>
@@ -142,7 +148,6 @@ function ImageUploader({ images, onImagesChange }: ImageUploaderProps) {
           ))}
         </div>
       )}
-
       {images.length === 0 && (
         <div className="flex items-center gap-2 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl">
           <ImageIcon className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
@@ -151,6 +156,211 @@ function ImageUploader({ images, onImagesChange }: ImageUploaderProps) {
           </p>
         </div>
       )}
+    </div>
+  );
+}
+
+// ===== Size Selector Component =====
+interface SizeSelectorProps {
+  category: string;
+  selectedSizes: string[];
+  onSizesChange: (sizes: string[]) => void;
+}
+
+function SizeSelector({ category, selectedSizes, onSizesChange }: SizeSelectorProps) {
+  const availableSizes = getDefaultSizes(category);
+  const [customSize, setCustomSize] = useState('');
+
+  if (availableSizes.length === 0) return null;
+
+  const toggleSize = (size: string) => {
+    if (selectedSizes.includes(size)) {
+      onSizesChange(selectedSizes.filter(s => s !== size));
+    } else {
+      onSizesChange([...selectedSizes, size]);
+    }
+  };
+
+  const addCustomSize = () => {
+    const trimmed = customSize.trim().toUpperCase();
+    if (trimmed && !selectedSizes.includes(trimmed)) {
+      onSizesChange([...selectedSizes, trimmed]);
+      setCustomSize('');
+    }
+  };
+
+  const selectAll = () => onSizesChange([...availableSizes]);
+  const clearAll = () => onSizesChange([]);
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <label className="bangla text-sm font-semibold flex items-center gap-1.5">
+          <Tag className="w-4 h-4 text-primary" />
+          সাইজ নির্বাচন করুন
+        </label>
+        <div className="flex gap-2">
+          <button type="button" onClick={selectAll}
+            className="text-xs text-primary hover:underline bangla font-medium">
+            সব যোগ
+          </button>
+          <span className="text-muted-foreground">|</span>
+          <button type="button" onClick={clearAll}
+            className="text-xs text-muted-foreground hover:text-foreground bangla">
+            মুছুন
+          </button>
+        </div>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {availableSizes.map(size => (
+          <button
+            key={size}
+            type="button"
+            onClick={() => toggleSize(size)}
+            className={cn(
+              "px-3 py-1.5 rounded-xl text-xs font-bold border-2 transition-all duration-200",
+              selectedSizes.includes(size)
+                ? "border-primary bg-primary text-white shadow-sm"
+                : "border-border bg-background text-foreground hover:border-primary/50"
+            )}
+          >
+            {size}
+          </button>
+        ))}
+      </div>
+      {/* Custom size input */}
+      <div className="flex gap-2">
+        <input
+          value={customSize}
+          onChange={e => setCustomSize(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addCustomSize())}
+          placeholder="কাস্টম সাইজ যোগ করুন (যেমন: 4XL)"
+          className="flex-1 px-3 py-2 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary bangla text-foreground placeholder:text-muted-foreground"
+        />
+        <button type="button" onClick={addCustomSize}
+          className="px-3 py-2 bg-primary/10 text-primary rounded-xl text-sm font-semibold hover:bg-primary/20 transition-colors bangla">
+          + যোগ
+        </button>
+      </div>
+      {selectedSizes.length > 0 && (
+        <p className="bangla text-xs text-green-600 dark:text-green-400 font-medium">
+          ✅ নির্বাচিত: {selectedSizes.join(', ')}
+        </p>
+      )}
+    </div>
+  );
+}
+
+// ===== Product Form Component =====
+interface ProductFormProps {
+  product: Omit<Product, 'id' | 'createdAt'>;
+  onChange: (p: Omit<Product, 'id' | 'createdAt'>) => void;
+  inputCls: string;
+}
+
+function ProductForm({ product, onChange, inputCls }: ProductFormProps) {
+  return (
+    <div className="space-y-5">
+      {/* Image Upload */}
+      <div>
+        <label className="bangla text-sm font-semibold mb-2 block flex items-center gap-1.5">
+          <ImageIcon className="w-4 h-4 text-primary" />
+          পণ্যের ছবি আপলোড করুন *
+        </label>
+        <ImageUploader
+          images={product.images}
+          onImagesChange={(imgs) => onChange({ ...product, images: imgs })}
+        />
+      </div>
+
+      <div className="grid sm:grid-cols-2 gap-4">
+        <div>
+          <label className="bangla text-sm font-semibold mb-1.5 block">পণ্যের নাম (বাংলা) *</label>
+          <input value={product.nameBn}
+            onChange={e => onChange({ ...product, nameBn: e.target.value })}
+            className={inputCls} placeholder="যেমন: নীল টি-শার্ট" />
+        </div>
+        <div>
+          <label className="bangla text-sm font-semibold mb-1.5 block">Product Name (English) *</label>
+          <input value={product.name}
+            onChange={e => onChange({ ...product, name: e.target.value })}
+            className={inputCls} placeholder="e.g: Blue T-Shirt" />
+        </div>
+        <div>
+          <label className="bangla text-sm font-semibold mb-1.5 block">মূল্য (৳) *</label>
+          <input type="number" value={product.price || ''}
+            onChange={e => onChange({ ...product, price: Number(e.target.value) })}
+            className={inputCls} placeholder="0" min="0" />
+        </div>
+        <div>
+          <label className="bangla text-sm font-semibold mb-1.5 block">আসল মূল্য (৳) — ছাড় দেখাতে</label>
+          <input type="number" value={product.originalPrice || ''}
+            onChange={e => onChange({ ...product, originalPrice: Number(e.target.value) || undefined })}
+            className={inputCls} placeholder="0 (ঐচ্ছিক)" min="0" />
+        </div>
+        <div>
+          <label className="bangla text-sm font-semibold mb-1.5 block">বিভাগ *</label>
+          <select value={product.category}
+            onChange={e => {
+              const newCat = e.target.value;
+              const defaultSizes = getDefaultSizes(newCat);
+              onChange({ ...product, category: newCat, sizes: defaultSizes });
+            }}
+            className={`${inputCls} cursor-pointer`}>
+            {CATEGORIES.filter(c => c.id !== 'all').map(c => (
+              <option key={c.id} value={c.id}>{c.icon} {c.nameBn}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="bangla text-sm font-semibold mb-1.5 block">স্টক পরিমাণ</label>
+          <input type="number" value={product.stock}
+            onChange={e => onChange({ ...product, stock: Number(e.target.value) })}
+            className={inputCls} min="0" />
+        </div>
+        <div>
+          <label className="bangla text-sm font-semibold mb-1.5 block">ব্যাজ</label>
+          <select value={product.badge || ''}
+            onChange={e => onChange({ ...product, badge: (e.target.value as Product['badge']) || undefined })}
+            className={`${inputCls} cursor-pointer`}>
+            <option value="">কোনো ব্যাজ নেই</option>
+            <option value="new">🆕 নতুন (New)</option>
+            <option value="hot">🔥 হট (Hot)</option>
+            <option value="sale">🏷️ সেল (Sale)</option>
+          </select>
+        </div>
+        <div className="flex items-center gap-3 pt-2">
+          <input type="checkbox" id={`featured-${product.nameBn}`} checked={product.featured}
+            onChange={e => onChange({ ...product, featured: e.target.checked })}
+            className="w-5 h-5 accent-primary rounded cursor-pointer" />
+          <label htmlFor={`featured-${product.nameBn}`} className="bangla text-sm font-medium cursor-pointer">
+            ⭐ হোমপেজে ফিচার্ড হিসেবে দেখাবে
+          </label>
+        </div>
+        <div className="sm:col-span-2">
+          <label className="bangla text-sm font-semibold mb-1.5 block">বিবরণ (বাংলা)</label>
+          <textarea value={product.descriptionBn}
+            onChange={e => onChange({ ...product, descriptionBn: e.target.value })}
+            rows={2} className={`${inputCls} resize-none`}
+            placeholder="পণ্যের বিস্তারিত বিবরণ..." />
+        </div>
+        <div className="sm:col-span-2">
+          <label className="bangla text-sm font-semibold mb-1.5 block">Description (English)</label>
+          <textarea value={product.description}
+            onChange={e => onChange({ ...product, description: e.target.value })}
+            rows={2} className={`${inputCls} resize-none`}
+            placeholder="Product description..." />
+        </div>
+      </div>
+
+      {/* Size Selector */}
+      <div className="p-4 bg-muted/40 rounded-2xl border border-border">
+        <SizeSelector
+          category={product.category}
+          selectedSizes={product.sizes || []}
+          onSizesChange={(sizes) => onChange({ ...product, sizes })}
+        />
+      </div>
     </div>
   );
 }
@@ -259,7 +469,6 @@ export default function AdminDashboard() {
     toast.success('ঘোষণা মুছে ফেলা হয়েছে।');
   };
 
-  // Stats
   const totalRevenue = orders.reduce((s, o) => s + o.totalAmount, 0);
   const pendingOrders = orders.filter(o => o.status === 'pending').length;
 
@@ -286,7 +495,7 @@ export default function AdminDashboard() {
   return (
     <div className="min-h-screen bg-muted/30 flex">
       {/* Sidebar */}
-      <div className="w-16 md:w-60 bg-slate-900 flex flex-col shrink-0 sticky top-0 h-screen overflow-hidden">
+      <div className="w-16 md:w-60 bg-slate-900 flex flex-col shrink-0 sticky top-0 h-screen overflow-hidden z-20">
         <div className="p-3 md:p-4 border-b border-slate-800 shrink-0">
           <img src={LOGO_URL} alt="Logo" className="h-8 md:h-10 w-auto object-contain mx-auto md:mx-0" />
         </div>
@@ -341,8 +550,7 @@ export default function AdminDashboard() {
                 <Bell className="w-3.5 h-3.5" /> {pendingOrders}টি নতুন অর্ডার
               </div>
             )}
-            <button onClick={refresh}
-              className="p-2 rounded-xl hover:bg-muted transition-colors" title="Refresh">
+            <button onClick={refresh} className="p-2 rounded-xl hover:bg-muted transition-colors" title="Refresh">
               <RefreshCw className="w-4 h-4 text-muted-foreground" />
             </button>
           </div>
@@ -360,25 +568,24 @@ export default function AdminDashboard() {
                   { label: 'অপেক্ষমাণ', value: pendingOrders, icon: <AlertCircle className="w-5 h-5" />, color: 'text-yellow-500', bg: 'bg-yellow-100 dark:bg-yellow-900/30' },
                   { label: 'মোট আয়', value: formatPriceEn(totalRevenue), icon: <TrendingUp className="w-5 h-5" />, color: 'text-primary', bg: 'bg-primary/10' },
                 ].map((s, i) => (
-                  <div key={i} className="glass-card rounded-2xl p-5 flex items-center gap-4 hover:shadow-lg transition-shadow">
-                    <div className={`w-12 h-12 rounded-2xl ${s.bg} ${s.color} flex items-center justify-center shrink-0`}>
+                  <div key={i} className="glass-card rounded-2xl p-4 md:p-5 flex items-center gap-3 md:gap-4 hover:shadow-lg transition-shadow">
+                    <div className={`w-10 h-10 md:w-12 md:h-12 rounded-2xl ${s.bg} ${s.color} flex items-center justify-center shrink-0`}>
                       {s.icon}
                     </div>
                     <div className="min-w-0">
-                      <p className="bangla text-2xl font-extrabold truncate">{s.value}</p>
+                      <p className="bangla text-xl md:text-2xl font-extrabold truncate">{s.value}</p>
                       <p className="bangla text-xs text-muted-foreground">{s.label}</p>
                     </div>
                   </div>
                 ))}
               </div>
 
-              {/* Quick Actions */}
               <div className="grid sm:grid-cols-2 gap-4">
                 <button
                   onClick={() => { setTab('products'); setShowAddProduct(true); setNewProduct({ ...EMPTY_PRODUCT }); }}
                   className="glass-card rounded-2xl p-5 flex items-center gap-4 hover:shadow-lg transition-all duration-200 hover:-translate-y-0.5 text-left group cursor-pointer border-2 border-transparent hover:border-primary/30"
                 >
-                  <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center group-hover:bg-primary transition-colors duration-200">
+                  <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center group-hover:bg-primary transition-colors duration-200 shrink-0">
                     <Plus className="w-6 h-6 text-primary group-hover:text-white transition-colors" />
                   </div>
                   <div>
@@ -390,7 +597,7 @@ export default function AdminDashboard() {
                   onClick={() => setTab('orders')}
                   className="glass-card rounded-2xl p-5 flex items-center gap-4 hover:shadow-lg transition-all duration-200 hover:-translate-y-0.5 text-left group cursor-pointer border-2 border-transparent hover:border-secondary/30"
                 >
-                  <div className="w-12 h-12 rounded-2xl bg-secondary/10 flex items-center justify-center group-hover:bg-secondary transition-colors duration-200">
+                  <div className="w-12 h-12 rounded-2xl bg-secondary/10 flex items-center justify-center group-hover:bg-secondary transition-colors duration-200 shrink-0">
                     <ShoppingBag className="w-6 h-6 text-secondary group-hover:text-white transition-colors" />
                   </div>
                   <div>
@@ -452,12 +659,13 @@ export default function AdminDashboard() {
                           src={p.images[0] || 'https://images.unsplash.com/photo-1560393464-5c69a73c5770?w=80'}
                           alt={p.nameBn}
                           className="w-14 h-14 rounded-xl object-cover mx-auto mb-2 border border-border"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1560393464-5c69a73c5770?w=80';
-                          }}
+                          onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1560393464-5c69a73c5770?w=80'; }}
                         />
                         <p className="bangla text-xs font-semibold line-clamp-1">{p.nameBn}</p>
                         <p className="text-primary font-bold text-sm">{formatPriceEn(p.price)}</p>
+                        {p.sizes && p.sizes.length > 0 && (
+                          <p className="text-xs text-muted-foreground mt-0.5">{p.sizes.slice(0, 3).join(', ')}{p.sizes.length > 3 ? '...' : ''}</p>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -480,106 +688,17 @@ export default function AdminDashboard() {
               {/* Add Product Modal */}
               {showAddProduct && (
                 <div className="fixed inset-0 modal-overlay z-50 flex items-start justify-center p-4 overflow-y-auto">
-                  <div className="bg-background rounded-3xl p-6 w-full max-w-2xl my-8 shadow-2xl animate-scale-in border border-border">
-                    <div className="flex items-center justify-between mb-6">
+                  <div className="bg-background rounded-3xl p-5 md:p-6 w-full max-w-2xl my-4 md:my-8 shadow-2xl animate-scale-in border border-border">
+                    <div className="flex items-center justify-between mb-5">
                       <div>
                         <h3 className="bangla font-bold text-lg">নতুন পণ্য যোগ করুন</h3>
                         <p className="bangla text-xs text-muted-foreground mt-0.5">পণ্যের তথ্য পূরণ করুন এবং ছবি আপলোড করুন</p>
                       </div>
-                      <button onClick={() => setShowAddProduct(false)}
-                        className="p-2 rounded-full hover:bg-muted transition-colors">
+                      <button onClick={() => setShowAddProduct(false)} className="p-2 rounded-full hover:bg-muted transition-colors">
                         <X className="w-5 h-5" />
                       </button>
                     </div>
-                    <div className="space-y-5">
-                      {/* Image Upload First */}
-                      <div>
-                        <label className="bangla text-sm font-semibold mb-2 block flex items-center gap-1.5">
-                          <ImageIcon className="w-4 h-4 text-primary" />
-                          পণ্যের ছবি আপলোড করুন *
-                        </label>
-                        <ImageUploader
-                          images={newProduct.images}
-                          onImagesChange={(imgs) => setNewProduct({ ...newProduct, images: imgs })}
-                        />
-                      </div>
-
-                      <div className="grid sm:grid-cols-2 gap-4">
-                        <div>
-                          <label className="bangla text-sm font-semibold mb-1.5 block">পণ্যের নাম (বাংলা) *</label>
-                          <input value={newProduct.nameBn}
-                            onChange={e => setNewProduct({ ...newProduct, nameBn: e.target.value })}
-                            className={inputCls} placeholder="যেমন: নীল টি-শার্ট" />
-                        </div>
-                        <div>
-                          <label className="bangla text-sm font-semibold mb-1.5 block">Product Name (English) *</label>
-                          <input value={newProduct.name}
-                            onChange={e => setNewProduct({ ...newProduct, name: e.target.value })}
-                            className={inputCls} placeholder="e.g: Blue T-Shirt" />
-                        </div>
-                        <div>
-                          <label className="bangla text-sm font-semibold mb-1.5 block">মূল্য (৳) *</label>
-                          <input type="number" value={newProduct.price || ''}
-                            onChange={e => setNewProduct({ ...newProduct, price: Number(e.target.value) })}
-                            className={inputCls} placeholder="0" min="0" />
-                        </div>
-                        <div>
-                          <label className="bangla text-sm font-semibold mb-1.5 block">আসল মূল্য (৳) — ছাড় দেখাতে</label>
-                          <input type="number" value={newProduct.originalPrice || ''}
-                            onChange={e => setNewProduct({ ...newProduct, originalPrice: Number(e.target.value) || undefined })}
-                            className={inputCls} placeholder="0 (ঐচ্ছিক)" min="0" />
-                        </div>
-                        <div>
-                          <label className="bangla text-sm font-semibold mb-1.5 block">বিভাগ *</label>
-                          <select value={newProduct.category}
-                            onChange={e => setNewProduct({ ...newProduct, category: e.target.value })}
-                            className={`${inputCls} cursor-pointer`}>
-                            {CATEGORIES.filter(c => c.id !== 'all').map(c => (
-                              <option key={c.id} value={c.id}>{c.icon} {c.nameBn}</option>
-                            ))}
-                          </select>
-                        </div>
-                        <div>
-                          <label className="bangla text-sm font-semibold mb-1.5 block">স্টক পরিমাণ</label>
-                          <input type="number" value={newProduct.stock}
-                            onChange={e => setNewProduct({ ...newProduct, stock: Number(e.target.value) })}
-                            className={inputCls} min="0" />
-                        </div>
-                        <div>
-                          <label className="bangla text-sm font-semibold mb-1.5 block">ব্যাজ</label>
-                          <select value={newProduct.badge || ''}
-                            onChange={e => setNewProduct({ ...newProduct, badge: (e.target.value as Product['badge']) || undefined })}
-                            className={`${inputCls} cursor-pointer`}>
-                            <option value="">কোনো ব্যাজ নেই</option>
-                            <option value="new">🆕 নতুন (New)</option>
-                            <option value="hot">🔥 হট (Hot)</option>
-                            <option value="sale">🏷️ সেল (Sale)</option>
-                          </select>
-                        </div>
-                        <div className="flex items-center gap-3 pt-2">
-                          <input type="checkbox" id="featuredNew" checked={newProduct.featured}
-                            onChange={e => setNewProduct({ ...newProduct, featured: e.target.checked })}
-                            className="w-5 h-5 accent-primary rounded cursor-pointer" />
-                          <label htmlFor="featuredNew" className="bangla text-sm font-medium cursor-pointer">
-                            ⭐ হোমপেজে ফিচার্ড হিসেবে দেখাবে
-                          </label>
-                        </div>
-                        <div className="sm:col-span-2">
-                          <label className="bangla text-sm font-semibold mb-1.5 block">বিবরণ (বাংলা)</label>
-                          <textarea value={newProduct.descriptionBn}
-                            onChange={e => setNewProduct({ ...newProduct, descriptionBn: e.target.value })}
-                            rows={2} className={`${inputCls} resize-none`}
-                            placeholder="পণ্যের বিস্তারিত বিবরণ..." />
-                        </div>
-                        <div className="sm:col-span-2">
-                          <label className="bangla text-sm font-semibold mb-1.5 block">Description (English)</label>
-                          <textarea value={newProduct.description}
-                            onChange={e => setNewProduct({ ...newProduct, description: e.target.value })}
-                            rows={2} className={`${inputCls} resize-none`}
-                            placeholder="Product description..." />
-                        </div>
-                      </div>
-                    </div>
+                    <ProductForm product={newProduct} onChange={setNewProduct} inputCls={inputCls} />
                     <div className="flex gap-3 mt-6">
                       <button onClick={() => setShowAddProduct(false)}
                         className="flex-1 py-3 rounded-xl border border-border bangla font-semibold hover:bg-muted transition-colors">
@@ -597,104 +716,21 @@ export default function AdminDashboard() {
               {/* Edit Product Modal */}
               {editProduct && (
                 <div className="fixed inset-0 modal-overlay z-50 flex items-start justify-center p-4 overflow-y-auto">
-                  <div className="bg-background rounded-3xl p-6 w-full max-w-2xl my-8 shadow-2xl animate-scale-in border border-border">
-                    <div className="flex items-center justify-between mb-6">
+                  <div className="bg-background rounded-3xl p-5 md:p-6 w-full max-w-2xl my-4 md:my-8 shadow-2xl animate-scale-in border border-border">
+                    <div className="flex items-center justify-between mb-5">
                       <div>
-                        <h3 className="bangla font-bold text-lg">পণ্য সম্পাদনা করুন</h3>
+                        <h3 className="bangla font-bold text-lg">পণ্য সম্পাদনা</h3>
                         <p className="bangla text-xs text-muted-foreground mt-0.5">{editProduct.nameBn}</p>
                       </div>
-                      <button onClick={() => setEditProduct(null)}
-                        className="p-2 rounded-full hover:bg-muted transition-colors">
+                      <button onClick={() => setEditProduct(null)} className="p-2 rounded-full hover:bg-muted transition-colors">
                         <X className="w-5 h-5" />
                       </button>
                     </div>
-                    <div className="space-y-5">
-                      {/* Image Upload */}
-                      <div>
-                        <label className="bangla text-sm font-semibold mb-2 block flex items-center gap-1.5">
-                          <ImageIcon className="w-4 h-4 text-primary" />
-                          পণ্যের ছবি পরিবর্তন করুন
-                        </label>
-                        <ImageUploader
-                          images={editProduct.images}
-                          onImagesChange={(imgs) => setEditProduct({ ...editProduct, images: imgs })}
-                        />
-                      </div>
-
-                      <div className="grid sm:grid-cols-2 gap-4">
-                        <div>
-                          <label className="bangla text-sm font-semibold mb-1.5 block">পণ্যের নাম (বাংলা)</label>
-                          <input value={editProduct.nameBn}
-                            onChange={e => setEditProduct({ ...editProduct, nameBn: e.target.value })}
-                            className={inputCls} />
-                        </div>
-                        <div>
-                          <label className="bangla text-sm font-semibold mb-1.5 block">Product Name (English)</label>
-                          <input value={editProduct.name}
-                            onChange={e => setEditProduct({ ...editProduct, name: e.target.value })}
-                            className={inputCls} />
-                        </div>
-                        <div>
-                          <label className="bangla text-sm font-semibold mb-1.5 block">মূল্য (৳)</label>
-                          <input type="number" value={editProduct.price}
-                            onChange={e => setEditProduct({ ...editProduct, price: Number(e.target.value) })}
-                            className={inputCls} min="0" />
-                        </div>
-                        <div>
-                          <label className="bangla text-sm font-semibold mb-1.5 block">আসল মূল্য (৳)</label>
-                          <input type="number" value={editProduct.originalPrice || ''}
-                            onChange={e => setEditProduct({ ...editProduct, originalPrice: Number(e.target.value) || undefined })}
-                            className={inputCls} min="0" />
-                        </div>
-                        <div>
-                          <label className="bangla text-sm font-semibold mb-1.5 block">বিভাগ</label>
-                          <select value={editProduct.category}
-                            onChange={e => setEditProduct({ ...editProduct, category: e.target.value })}
-                            className={`${inputCls} cursor-pointer`}>
-                            {CATEGORIES.filter(c => c.id !== 'all').map(c => (
-                              <option key={c.id} value={c.id}>{c.icon} {c.nameBn}</option>
-                            ))}
-                          </select>
-                        </div>
-                        <div>
-                          <label className="bangla text-sm font-semibold mb-1.5 block">স্টক</label>
-                          <input type="number" value={editProduct.stock}
-                            onChange={e => setEditProduct({ ...editProduct, stock: Number(e.target.value) })}
-                            className={inputCls} min="0" />
-                        </div>
-                        <div>
-                          <label className="bangla text-sm font-semibold mb-1.5 block">ব্যাজ</label>
-                          <select value={editProduct.badge || ''}
-                            onChange={e => setEditProduct({ ...editProduct, badge: (e.target.value as Product['badge']) || undefined })}
-                            className={`${inputCls} cursor-pointer`}>
-                            <option value="">কোনো ব্যাজ নেই</option>
-                            <option value="new">🆕 নতুন</option>
-                            <option value="hot">🔥 হট</option>
-                            <option value="sale">🏷️ সেল</option>
-                          </select>
-                        </div>
-                        <div className="flex items-center gap-3 pt-2">
-                          <input type="checkbox" id="featuredEdit" checked={editProduct.featured}
-                            onChange={e => setEditProduct({ ...editProduct, featured: e.target.checked })}
-                            className="w-5 h-5 accent-primary rounded cursor-pointer" />
-                          <label htmlFor="featuredEdit" className="bangla text-sm font-medium cursor-pointer">
-                            ⭐ হোমপেজে ফিচার্ড হিসেবে দেখাবে
-                          </label>
-                        </div>
-                        <div className="sm:col-span-2">
-                          <label className="bangla text-sm font-semibold mb-1.5 block">বিবরণ (বাংলা)</label>
-                          <textarea value={editProduct.descriptionBn}
-                            onChange={e => setEditProduct({ ...editProduct, descriptionBn: e.target.value })}
-                            rows={2} className={`${inputCls} resize-none`} />
-                        </div>
-                        <div className="sm:col-span-2">
-                          <label className="bangla text-sm font-semibold mb-1.5 block">Description (English)</label>
-                          <textarea value={editProduct.description}
-                            onChange={e => setEditProduct({ ...editProduct, description: e.target.value })}
-                            rows={2} className={`${inputCls} resize-none`} />
-                        </div>
-                      </div>
-                    </div>
+                    <ProductForm
+                      product={editProduct}
+                      onChange={(p) => setEditProduct({ ...editProduct, ...p })}
+                      inputCls={inputCls}
+                    />
                     <div className="flex gap-3 mt-6">
                       <button onClick={() => setEditProduct(null)}
                         className="flex-1 py-3 rounded-xl border border-border bangla font-semibold hover:bg-muted transition-colors">
@@ -714,16 +750,13 @@ export default function AdminDashboard() {
                 <div className="text-center py-20">
                   <Package className="w-16 h-16 text-muted-foreground/20 mx-auto mb-4" />
                   <p className="bangla text-muted-foreground text-lg mb-2">কোনো পণ্য যোগ করা হয়নি।</p>
-                  <p className="bangla text-muted-foreground text-sm mb-4">উপরের বোতামে ক্লিক করে পণ্য যোগ করুন।</p>
-                  <button
-                    onClick={() => { setShowAddProduct(true); setNewProduct({ ...EMPTY_PRODUCT }); }}
-                    className="btn-primary text-white px-6 py-3 rounded-xl font-semibold bangla inline-flex items-center gap-2"
-                  >
+                  <button onClick={() => { setShowAddProduct(true); setNewProduct({ ...EMPTY_PRODUCT }); }}
+                    className="btn-primary text-white px-6 py-3 rounded-xl font-semibold bangla inline-flex items-center gap-2">
                     <Plus className="w-4 h-4" /> প্রথম পণ্য যোগ করুন
                   </button>
                 </div>
               ) : (
-                <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4">
                   {products.map(p => (
                     <div key={p.id} className="glass-card rounded-2xl overflow-hidden hover:shadow-lg transition-all duration-200 hover:-translate-y-0.5">
                       <div className="aspect-square bg-muted relative overflow-hidden">
@@ -731,9 +764,7 @@ export default function AdminDashboard() {
                           src={p.images[0] || 'https://images.unsplash.com/photo-1560393464-5c69a73c5770?w=300'}
                           alt={p.nameBn}
                           className="w-full h-full object-cover"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1560393464-5c69a73c5770?w=300';
-                          }}
+                          onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1560393464-5c69a73c5770?w=300'; }}
                         />
                         {p.featured && (
                           <span className="absolute top-2 left-2 px-2 py-0.5 bg-primary text-white text-xs rounded-full bangla font-semibold shadow-md">
@@ -748,28 +779,30 @@ export default function AdminDashboard() {
                             {p.badge === 'new' ? 'NEW' : p.badge === 'hot' ? 'HOT' : 'SALE'}
                           </span>
                         )}
-                        {p.images.length > 1 && (
-                          <span className="absolute bottom-2 right-2 px-2 py-0.5 bg-black/60 text-white text-xs rounded-full">
-                            +{p.images.length - 1} ছবি
-                          </span>
-                        )}
                       </div>
-                      <div className="p-3 space-y-2">
+                      <div className="p-3 space-y-1.5">
                         <h4 className="bangla font-semibold text-sm line-clamp-1">{p.nameBn}</h4>
-                        <p className="text-xs text-muted-foreground line-clamp-1">{p.name}</p>
                         <div className="flex items-center justify-between">
                           <span className="text-primary font-bold text-base">{formatPriceEn(p.price)}</span>
                           <span className="bangla text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
                             স্টক: {p.stock}
                           </span>
                         </div>
-                        <div className="flex gap-2">
+                        {p.sizes && p.sizes.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {p.sizes.slice(0, 4).map(s => (
+                              <span key={s} className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded-md font-medium">{s}</span>
+                            ))}
+                            {p.sizes.length > 4 && <span className="text-xs text-muted-foreground">+{p.sizes.length - 4}</span>}
+                          </div>
+                        )}
+                        <div className="flex gap-2 pt-1">
                           <button onClick={() => setEditProduct({ ...p })}
-                            className="flex-1 py-2 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-xl text-xs font-semibold bangla flex items-center justify-center gap-1 hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors">
+                            className="flex-1 py-2 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-xl text-xs font-semibold bangla flex items-center justify-center gap-1 hover:bg-blue-200 transition-colors">
                             <Edit3 className="w-3 h-3" /> সম্পাদনা
                           </button>
                           <button onClick={() => handleDeleteProduct(p.id)}
-                            className="flex-1 py-2 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-xl text-xs font-semibold bangla flex items-center justify-center gap-1 hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors">
+                            className="flex-1 py-2 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-xl text-xs font-semibold bangla flex items-center justify-center gap-1 hover:bg-red-200 transition-colors">
                             <Trash2 className="w-3 h-3" /> মুছুন
                           </button>
                         </div>
@@ -800,7 +833,7 @@ export default function AdminDashboard() {
               ) : (
                 <div className="space-y-4">
                   {orders.map(order => (
-                    <div key={order.id} className="glass-card rounded-2xl p-5 hover:shadow-lg transition-shadow">
+                    <div key={order.id} className="glass-card rounded-2xl p-4 md:p-5 hover:shadow-lg transition-shadow">
                       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-4">
                         <div className="flex-1 min-w-0">
                           <div className="flex flex-wrap items-center gap-2 mb-1.5">
@@ -840,18 +873,14 @@ export default function AdminDashboard() {
                           <p className="text-xs text-muted-foreground">{formatDateEn(order.createdAt)}</p>
                         </div>
                       </div>
-
-                      {/* Items */}
                       <div className="flex flex-wrap gap-1.5 mb-4">
                         {order.items.map(item => (
                           <span key={item.product.id}
                             className="bangla text-xs bg-muted px-2.5 py-1 rounded-full border border-border/50">
-                            {item.product.nameBn} ×{item.quantity}
+                            {item.product.nameBn} ×{item.quantity}{item.size ? ` (${item.size})` : ''}
                           </span>
                         ))}
                       </div>
-
-                      {/* Status Update Buttons */}
                       <div>
                         <p className="bangla text-xs text-muted-foreground mb-2 font-medium">স্ট্যাটাস পরিবর্তন করুন:</p>
                         <div className="flex flex-wrap gap-2">
@@ -882,12 +911,11 @@ export default function AdminDashboard() {
                 <p className="bangla text-sm text-muted-foreground">মোট <strong>{announcements.length}</strong>টি ঘোষণা</p>
                 <button onClick={() => setShowAddAnn(true)}
                   className="btn-primary text-white px-4 py-2.5 rounded-xl font-semibold bangla flex items-center gap-2 text-sm">
-                  <Plus className="w-4 h-4" /> নতুন ঘোষণা যোগ করুন
+                  <Plus className="w-4 h-4" /> নতুন ঘোষণা
                 </button>
               </div>
-
               {showAddAnn && (
-                <div className="glass-card rounded-2xl p-6 space-y-4 animate-scale-in border-2 border-primary/20 bg-primary/5">
+                <div className="glass-card rounded-2xl p-5 md:p-6 space-y-4 animate-scale-in border-2 border-primary/20">
                   <h3 className="bangla font-bold text-base">নতুন ঘোষণা লিখুন</h3>
                   <div>
                     <label className="bangla text-sm font-semibold mb-1.5 block">ঘোষণা (বাংলায়) *</label>
@@ -899,17 +927,17 @@ export default function AdminDashboard() {
                     <label className="bangla text-sm font-semibold mb-1.5 block">Announcement (English) *</label>
                     <input value={newAnnouncement.text}
                       onChange={e => setNewAnnouncement({ ...newAnnouncement, text: e.target.value })}
-                      placeholder="Write announcement in English..." className={inputCls} />
+                      placeholder="Write in English..." className={inputCls} />
                   </div>
                   <div>
-                    <label className="bangla text-sm font-semibold mb-1.5 block">ধরন নির্বাচন করুন</label>
+                    <label className="bangla text-sm font-semibold mb-1.5 block">ধরন</label>
                     <select value={newAnnouncement.type}
                       onChange={e => setNewAnnouncement({ ...newAnnouncement, type: e.target.value as Announcement['type'] })}
                       className={`${inputCls} cursor-pointer`}>
-                      <option value="info">ℹ️ তথ্য (Info)</option>
-                      <option value="promo">🎉 প্রমো (Promo)</option>
-                      <option value="warning">⚠️ সতর্কতা (Warning)</option>
-                      <option value="success">✅ সাফল্য (Success)</option>
+                      <option value="info">ℹ️ তথ্য</option>
+                      <option value="promo">🎉 প্রমো</option>
+                      <option value="warning">⚠️ সতর্কতা</option>
+                      <option value="success">✅ সাফল্য</option>
                     </select>
                   </div>
                   <div className="flex gap-3">
@@ -919,12 +947,11 @@ export default function AdminDashboard() {
                     </button>
                     <button onClick={handleAddAnnouncement}
                       className="flex-1 btn-primary text-white py-2.5 rounded-xl font-bold bangla flex items-center justify-center gap-2">
-                      <Plus className="w-4 h-4" /> ঘোষণা যোগ করুন
+                      <Plus className="w-4 h-4" /> যোগ করুন
                     </button>
                   </div>
                 </div>
               )}
-
               {announcements.length === 0 ? (
                 <div className="text-center py-20">
                   <Megaphone className="w-16 h-16 text-muted-foreground/20 mx-auto mb-4" />
@@ -933,35 +960,25 @@ export default function AdminDashboard() {
               ) : (
                 <div className="space-y-3">
                   {announcements.map(a => (
-                    <div key={a.id}
-                      className={cn(
-                        "glass-card rounded-2xl p-4 flex items-start gap-4 transition-all",
-                        !a.active && "opacity-50"
-                      )}>
+                    <div key={a.id} className={cn("glass-card rounded-2xl p-4 flex items-start gap-4 transition-all", !a.active && "opacity-50")}>
                       <Megaphone className={`w-5 h-5 mt-0.5 shrink-0 ${a.active ? 'text-primary' : 'text-muted-foreground'}`} />
                       <div className="flex-1 min-w-0">
                         <p className="bangla font-semibold text-sm mb-0.5">{a.textBn}</p>
                         <p className="text-xs text-muted-foreground mb-2">{a.text}</p>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className={`bangla text-xs px-2.5 py-1 rounded-full font-semibold ${
-                            a.active
-                              ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                              : 'bg-muted text-muted-foreground'
-                          }`}>
-                            {a.active ? '✅ সক্রিয়' : '⭕ নিষ্ক্রিয়'}
-                          </span>
-                          <span className="bangla text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{a.type}</span>
-                        </div>
+                        <span className={`bangla text-xs px-2.5 py-1 rounded-full font-semibold ${
+                          a.active ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-muted text-muted-foreground'
+                        }`}>
+                          {a.active ? '✅ সক্রিয়' : '⭕ নিষ্ক্রিয়'}
+                        </span>
                       </div>
                       <div className="flex gap-2 shrink-0">
                         <button onClick={() => handleToggleAnnouncement(a)}
-                          className={cn(
-                            "px-3 py-1.5 rounded-xl text-xs font-semibold bangla transition-all",
+                          className={cn("px-3 py-1.5 rounded-xl text-xs font-semibold bangla transition-all",
                             a.active
                               ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400'
                               : 'bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400'
                           )}>
-                          {a.active ? 'বন্ধ করুন' : 'চালু করুন'}
+                          {a.active ? 'বন্ধ' : 'চালু'}
                         </button>
                         <button onClick={() => handleDeleteAnnouncement(a.id)}
                           className="p-2 rounded-xl bg-red-100 text-red-600 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 transition-colors">

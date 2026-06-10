@@ -4,6 +4,10 @@ export const ADMIN_PIN = '090909';
 
 export const BKASH_NUMBERS = ['01750650124', '01835809017'];
 
+export const DELIVERY_CHARGE_OUTSIDE = 100;
+export const DELIVERY_CHARGE_INSIDE = 0;
+
+// Keep for backward compatibility
 export const DELIVERY_CHARGE_OUTSIDE_DHAKA = 100;
 export const DELIVERY_CHARGE_INSIDE_DHAKA = 0;
 
@@ -12,6 +16,12 @@ export const FACEBOOK_PAGE = 'https://www.facebook.com/share/1EAzfPtWbN/';
 export const LOGO_URL = 'https://cdn-ai.onspace.ai/onspace/project/uploads/3HdtFfGzbXDuVTEnk83LJk/Messenger_creation_E13BC199-B1FD-4A9F-BD4C-A4B493064EA6.jpeg';
 
 export const DEVELOPER_NAME = 'আমিরুল_আদনান';
+
+// Narayanganj is now the primary COD area
+export const COD_DISTRICT = 'নারায়ণগঞ্জ';
+
+// All districts eligible for Cash-on-Delivery (free delivery)
+export const COD_DISTRICTS = ['নারায়ণগঞ্জ'];
 
 export const CATEGORIES: Category[] = [
   { id: 'all', name: 'All Products', nameBn: 'সব পণ্য', icon: '🛍️', color: 'from-teal-500 to-cyan-500' },
@@ -24,11 +34,15 @@ export const CATEGORIES: Category[] = [
   { id: 'other', name: 'Others', nameBn: 'অন্যান্য', icon: '📦', color: 'from-gray-500 to-slate-500' },
 ];
 
-// Only Dhaka city and surrounding districts for COD + free delivery
-export const DHAKA_DISTRICTS = ['ঢাকা', 'নারায়ণগঞ্জ', 'গাজীপুর', 'মুন্সিগঞ্জ', 'মানিকগঞ্জ', 'নরসিংদী'];
+// Common sizes for clothing
+export const CLOTHING_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
+export const CAP_SIZES = ['Free Size', 'S/M', 'L/XL'];
+export const WATCH_SIZES = ['Free Size'];
+export const SUNGLASS_SIZES = ['Free Size'];
 
 export const BANGLADESH_DISTRICTS = [
-  'ঢাকা', 'নারায়ণগঞ্জ', 'গাজীপুর', 'মুন্সিগঞ্জ', 'মানিকগঞ্জ', 'নরসিংদী',
+  'নারায়ণগঞ্জ',
+  'ঢাকা', 'গাজীপুর', 'মুন্সিগঞ্জ', 'মানিকগঞ্জ', 'নরসিংদী',
   'চট্টগ্রাম', 'কক্সবাজার', 'রাঙামাটি', 'বান্দরবান', 'খাগড়াছড়ি', 'ফেনী', 'নোয়াখালী', 'লক্ষ্মীপুর', 'কুমিল্লা', 'চাঁদপুর', 'ব্রাহ্মণবাড়িয়া',
   'সিলেট', 'মৌলভীবাজার', 'হবিগঞ্জ', 'সুনামগঞ্জ',
   'রাজশাহী', 'চাঁপাইনবাবগঞ্জ', 'নওগাঁ', 'নাটোর', 'পাবনা', 'সিরাজগঞ্জ', 'বগুড়া', 'জয়পুরহাট',
@@ -53,6 +67,7 @@ export const SAMPLE_PRODUCTS: Product[] = [
     stock: 50,
     badge: 'sale',
     featured: true,
+    sizes: ['Free Size', 'S/M', 'L/XL'],
     createdAt: new Date().toISOString(),
   },
   {
@@ -68,6 +83,7 @@ export const SAMPLE_PRODUCTS: Product[] = [
     stock: 20,
     badge: 'hot',
     featured: true,
+    sizes: ['Free Size'],
     createdAt: new Date().toISOString(),
   },
   {
@@ -83,6 +99,7 @@ export const SAMPLE_PRODUCTS: Product[] = [
     stock: 30,
     badge: 'new',
     featured: true,
+    sizes: ['Free Size'],
     createdAt: new Date().toISOString(),
   },
   {
@@ -97,6 +114,7 @@ export const SAMPLE_PRODUCTS: Product[] = [
     stock: 40,
     badge: 'hot',
     featured: true,
+    sizes: ['S', 'M', 'L', 'XL', 'XXL'],
     createdAt: new Date().toISOString(),
   },
   {
@@ -112,6 +130,7 @@ export const SAMPLE_PRODUCTS: Product[] = [
     stock: 60,
     badge: 'sale',
     featured: true,
+    sizes: ['S', 'M', 'L', 'XL', 'XXL', 'XXXL'],
     createdAt: new Date().toISOString(),
   },
   {
@@ -127,6 +146,7 @@ export const SAMPLE_PRODUCTS: Product[] = [
     stock: 25,
     badge: 'new',
     featured: true,
+    sizes: ['S', 'M', 'L', 'XL', 'XXL'],
     createdAt: new Date().toISOString(),
   },
 ];
@@ -134,16 +154,16 @@ export const SAMPLE_PRODUCTS: Product[] = [
 export const SAMPLE_ANNOUNCEMENTS: Announcement[] = [
   {
     id: 'ann_1',
-    text: '🎉 Free Cash on Delivery inside Dhaka! Order now!',
-    textBn: '🎉 ঢাকার ভিতরে ক্যাশ-অন ডেলিভারি (বিনামূল্যে)! এখনই অর্ডার করুন!',
+    text: '🎉 Free Cash on Delivery inside Narayanganj! Order now!',
+    textBn: '🎉 নারায়ণগঞ্জের ভিতরে ক্যাশ-অন ডেলিভারি (বিনামূল্যে)! এখনই অর্ডার করুন!',
     active: true,
     createdAt: new Date().toISOString(),
     type: 'promo',
   },
   {
     id: 'ann_2',
-    text: '📦 Fast delivery all over Bangladesh - Outside Dhaka only ৳100 charge!',
-    textBn: '📦 সারাদেশে দ্রুত ডেলিভারি - ঢাকার বাইরে মাত্র ১০০ টাকা ডেলিভারি চার্জ!',
+    text: '📦 Fast delivery all over Bangladesh - Outside Narayanganj only ৳100 charge!',
+    textBn: '📦 সারাদেশে দ্রুত ডেলিভারি - নারায়ণগঞ্জের বাইরে মাত্র ১০০ টাকা ডেলিভারি চার্জ!',
     active: true,
     createdAt: new Date().toISOString(),
     type: 'info',

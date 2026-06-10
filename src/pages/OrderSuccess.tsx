@@ -1,5 +1,5 @@
 import { useLocation, Link } from 'react-router-dom';
-import { CheckCircle, ShoppingBag, Home, Facebook, Phone } from 'lucide-react';
+import { CheckCircle, ShoppingBag, Home, Facebook } from 'lucide-react';
 import { useLang } from '@/contexts/LanguageContext';
 import { Order } from '@/types';
 import { formatPriceEn } from '@/lib/utils';
@@ -14,24 +14,24 @@ export default function OrderSuccess() {
     <div className="min-h-screen bg-background flex items-center justify-center pt-20 px-4 pb-12">
       <div className="max-w-lg w-full space-y-6 text-center">
         {/* Success Animation */}
-        <div className="w-24 h-24 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto animate-bounce-in ring-4 ring-green-200 dark:ring-green-800">
-          <CheckCircle className="w-12 h-12 text-green-500" />
+        <div className="w-20 h-20 md:w-24 md:h-24 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto animate-bounce-in ring-4 ring-green-200 dark:ring-green-800">
+          <CheckCircle className="w-10 h-10 md:w-12 md:h-12 text-green-500" />
         </div>
 
         <div className="animate-fade-in-up">
-          <h1 className="bangla text-2xl md:text-3xl font-extrabold text-green-600 dark:text-green-400 mb-2">
+          <h1 className="bangla text-xl md:text-3xl font-extrabold text-green-600 dark:text-green-400 mb-2">
             {t('অর্ডার সফলভাবে দেওয়া হয়েছে! 🎉', 'Order Placed Successfully! 🎉')}
           </h1>
-          <p className="bangla text-muted-foreground leading-relaxed">
+          <p className="bangla text-muted-foreground leading-relaxed text-sm md:text-base">
             {t(
-              'ধন্যবাদ! আপনার অর্ডার পেয়েছি। শীঘ্রই আপনার সাথে যোগাযোগ করা হবে এবং ডেলিভারির তারিখ জানানো হবে।',
-              'Thank you! We received your order. We will contact you soon with delivery details.'
+              'ধন্যবাদ! আপনার অর্ডার পেয়েছি। শীঘ্রই আপনার সাথে যোগাযোগ করা হবে।',
+              'Thank you! We received your order. We will contact you soon.'
             )}
           </p>
         </div>
 
         {order && (
-          <div className="glass-card rounded-3xl p-6 text-left space-y-4 animate-scale-in">
+          <div className="glass-card rounded-3xl p-5 md:p-6 text-left space-y-4 animate-scale-in">
             <div className="flex items-center justify-between">
               <h2 className="bangla font-bold text-base">{t('অর্ডার বিবরণ', 'Order Details')}</h2>
               <span className="text-xs text-muted-foreground font-mono bg-muted px-2 py-1 rounded-lg">
@@ -49,17 +49,17 @@ export default function OrderSuccess() {
               </div>
               <div className="col-span-2">
                 <p className="bangla text-muted-foreground text-xs mb-0.5">{t('ঠিকানা', 'Address')}</p>
-                <p className="bangla font-semibold">{order.customer.address}, {order.customer.upazila}, {order.customer.district}</p>
+                <p className="bangla font-semibold text-sm">{order.customer.address}, {order.customer.upazila}, {order.customer.district}</p>
               </div>
               <div>
                 <p className="bangla text-muted-foreground text-xs mb-0.5">{t('পেমেন্ট', 'Payment')}</p>
-                <p className={`font-semibold bangla ${order.paymentMethod === 'cod' ? 'text-green-600' : 'text-pink-600'}`}>
+                <p className={`font-semibold bangla text-sm ${order.paymentMethod === 'cod' ? 'text-green-600' : 'text-pink-600'}`}>
                   {order.paymentMethod === 'bkash' ? 'বিকাশ' : t('ক্যাশ-অন ডেলিভারি', 'Cash on Delivery')}
                 </p>
               </div>
               <div>
                 <p className="bangla text-muted-foreground text-xs mb-0.5">{t('ডেলিভারি', 'Delivery')}</p>
-                <p className={`font-semibold bangla ${order.deliveryCharge === 0 ? 'text-green-500' : ''}`}>
+                <p className={`font-semibold bangla text-sm ${order.deliveryCharge === 0 ? 'text-green-500' : ''}`}>
                   {order.deliveryCharge === 0 ? t('বিনামূল্যে', 'FREE') : formatPriceEn(order.deliveryCharge)}
                 </p>
               </div>
@@ -68,11 +68,14 @@ export default function OrderSuccess() {
             {/* Items */}
             <div className="border-t border-border pt-3">
               {order.items.map(item => (
-                <div key={item.product.id} className="flex justify-between items-center text-sm py-1.5">
-                  <span className="bangla text-muted-foreground flex-1 line-clamp-1">
-                    {t(item.product.nameBn, item.product.name)} ×{item.quantity}
-                  </span>
-                  <span className="font-semibold ml-2">{formatPriceEn(item.product.price * item.quantity)}</span>
+                <div key={`${item.product.id}-${item.size}`} className="flex justify-between items-center text-sm py-1.5">
+                  <div className="flex-1 min-w-0 mr-2">
+                    <span className="bangla text-muted-foreground line-clamp-1">
+                      {t(item.product.nameBn, item.product.name)} ×{item.quantity}
+                    </span>
+                    {item.size && <p className="text-xs text-muted-foreground bangla">সাইজ: {item.size}</p>}
+                  </div>
+                  <span className="font-semibold shrink-0">{formatPriceEn(item.product.price * item.quantity)}</span>
                 </div>
               ))}
               <div className="flex justify-between font-bold text-base pt-2 border-t border-border mt-2">
@@ -83,14 +86,13 @@ export default function OrderSuccess() {
 
             <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-xl p-3 border border-yellow-200 dark:border-yellow-800">
               <p className="bangla text-yellow-700 dark:text-yellow-400 text-xs font-medium">
-                ⏳ {t('অর্ডার স্ট্যাটাস: অপেক্ষমাণ — আমরা শীঘ্রই কনফার্ম করব এবং ফোনে যোগাযোগ করব।',
-                  'Order Status: Pending — We will confirm soon and contact you by phone.')}
+                ⏳ {t('অর্ডার স্ট্যাটাস: অপেক্ষমাণ — আমরা শীঘ্রই ফোনে যোগাযোগ করব।',
+                  'Order Status: Pending — We will contact you by phone soon.')}
               </p>
             </div>
           </div>
         )}
 
-        {/* CTA Buttons */}
         <div className="flex flex-col sm:flex-row gap-3 animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
           <Link to="/" className="flex-1 bangla btn-primary text-white py-3.5 rounded-2xl font-bold flex items-center justify-center gap-2">
             <Home className="w-4 h-4" /> {t('হোমে যান', 'Go Home')}

@@ -15,8 +15,8 @@ export default function Footer() {
             <img src={LOGO_URL} alt="Versatile Shop" className="h-14 w-auto object-contain" />
             <p className="bangla text-sm text-slate-400 leading-relaxed">
               {t(
-                'বাংলাদেশের সেরা ই-কমার্স শপ। সেরা মানের পণ্য সাশ্রয়ী মূল্যে পান। ঢাকায় ক্যাশ-অন ডেলিভারি।',
-                "Bangladesh's top e-commerce shop. Quality products at best prices. COD in Dhaka."
+                'বাংলাদেশের সেরা ই-কমার্স শপ। সেরা মানের পণ্য সাশ্রয়ী মূল্যে পান। নারায়ণগঞ্জে ক্যাশ-অন ডেলিভারি।',
+                "Bangladesh's top e-commerce shop. Quality products at best prices. COD in Narayanganj."
               )}
             </p>
             <div className="flex items-center gap-3">
@@ -75,10 +75,10 @@ export default function Footer() {
                 {t('ডেলিভারি তথ্য', 'Delivery Info')}
               </p>
               <p className="bangla text-sm text-green-400 font-medium mb-1">
-                ✅ {t('ঢাকার ভিতরে: ক্যাশ-অন ডেলিভারি', 'Inside Dhaka: Cash on Delivery')}
+                ✅ {t('নারায়ণগঞ্জের ভিতরে: ক্যাশ-অন ডেলিভারি', 'Inside Narayanganj: Cash on Delivery')}
               </p>
               <p className="bangla text-sm text-yellow-400 font-medium">
-                📦 {t('ঢাকার বাইরে: মাত্র ১০০ টাকা', 'Outside Dhaka: Only ৳100')}
+                📦 {t('নারায়ণগঞ্জের বাইরে: মাত্র ১০০ টাকা', 'Outside Narayanganj: Only ৳100')}
               </p>
             </div>
           </div>

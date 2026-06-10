@@ -4,9 +4,9 @@ import { useCart } from '@/contexts/CartContext';
 import { useLang } from '@/contexts/LanguageContext';
 import { addOrder } from '@/lib/storage';
 import { generateId, formatPriceEn } from '@/lib/utils';
-import { BANGLADESH_DISTRICTS, DHAKA_DISTRICTS, BKASH_NUMBERS, DELIVERY_CHARGE_OUTSIDE_DHAKA } from '@/constants';
+import { BANGLADESH_DISTRICTS, COD_DISTRICTS, BKASH_NUMBERS, DELIVERY_CHARGE_OUTSIDE } from '@/constants';
 import { Order, CustomerInfo } from '@/types';
-import { ShoppingBag, Truck, CreditCard, Phone, MapPin, User, MessageSquare, CheckCircle, AlertCircle, ChevronLeft } from 'lucide-react';
+import { ShoppingBag, Truck, CreditCard, User, CheckCircle, AlertCircle, ChevronLeft } from 'lucide-react';
 
 type Step = 'info' | 'payment' | 'confirm';
 
@@ -18,7 +18,7 @@ export default function Checkout() {
   const [loading, setLoading] = useState(false);
 
   const [customer, setCustomer] = useState<CustomerInfo>({
-    name: '', phone: '', email: '', address: '', district: '', upazila: '', insideDhaka: false,
+    name: '', phone: '', email: '', address: '', district: '', upazila: '', insideNarayanganj: false,
   });
   const [paymentMethod, setPaymentMethod] = useState<'bkash' | 'cod'>('cod');
   const [bkashNumber, setBkashNumber] = useState('');
@@ -27,13 +27,11 @@ export default function Checkout() {
   const [notes, setNotes] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Robust Dhaka check
-  const isInsideDhaka = customer.district !== '' &&
-    DHAKA_DISTRICTS.some(d =>
-      customer.district === d ||
-      customer.district.toLowerCase() === d.toLowerCase()
-    );
-  const deliveryCharge = isInsideDhaka ? 0 : (customer.district ? DELIVERY_CHARGE_OUTSIDE_DHAKA : 0);
+  // Check if inside Narayanganj (free COD)
+  const isInsideNarayanganj = customer.district !== '' &&
+    COD_DISTRICTS.some(d => customer.district === d || customer.district.toLowerCase() === d.toLowerCase());
+
+  const deliveryCharge = isInsideNarayanganj ? 0 : (customer.district ? DELIVERY_CHARGE_OUTSIDE : 0);
   const grandTotal = totalPrice + deliveryCharge;
 
   if (items.length === 0) {
@@ -57,7 +55,7 @@ export default function Checkout() {
   const validateInfo = () => {
     const e: Record<string, string> = {};
     if (!customer.name.trim()) e.name = t('নাম দিন', 'Enter name');
-    if (!customer.phone.trim() || customer.phone.length < 11) e.phone = t('সঠিক ফোন নম্বর দিন', 'Enter valid phone (11 digits)');
+    if (!customer.phone.trim() || customer.phone.length < 11) e.phone = t('সঠিক ফোন নম্বর দিন (১১ সংখ্যা)', 'Enter valid phone (11 digits)');
     if (!customer.address.trim()) e.address = t('ঠিকানা দিন', 'Enter address');
     if (!customer.district) e.district = t('জেলা নির্বাচন করুন', 'Select district');
     if (!customer.upazila.trim()) e.upazila = t('উপজেলা/এলাকা দিন', 'Enter upazila/area');
@@ -79,7 +77,7 @@ export default function Checkout() {
     const order: Order = {
       id: generateId(),
       items,
-      customer: { ...customer, insideDhaka: isInsideDhaka },
+      customer: { ...customer, insideNarayanganj: isInsideNarayanganj },
       paymentMethod,
       bkashNumber: paymentMethod === 'bkash' ? bkashNumber : undefined,
       bkashTransactionId: paymentMethod === 'bkash' ? bkashTxId : undefined,
@@ -99,19 +97,18 @@ export default function Checkout() {
 
   const inputClass = "w-full px-4 py-3 rounded-xl border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary transition-all bangla placeholder:text-muted-foreground";
   const errorClass = "text-red-500 text-xs mt-1.5 bangla flex items-center gap-1";
-
   const stepIndex = ['info', 'payment', 'confirm'].indexOf(step);
   const stepLabels = [t('তথ্য', 'Info'), t('পেমেন্ট', 'Payment'), t('নিশ্চিত', 'Confirm')];
 
   return (
     <div className="min-h-screen bg-background pt-20">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
-        <h1 className="bangla text-2xl md:text-3xl font-extrabold mb-8 text-center gradient-text">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 md:py-8">
+        <h1 className="bangla text-2xl md:text-3xl font-extrabold mb-6 md:mb-8 text-center gradient-text">
           {t('অর্ডার কনফার্ম করুন', 'Confirm Your Order')}
         </h1>
 
-        {/* Progress Steps */}
-        <div className="flex items-center justify-center gap-2 mb-10">
+        {/* Progress */}
+        <div className="flex items-center justify-center gap-2 mb-8">
           {stepLabels.map((label, i) => (
             <div key={i} className="flex items-center gap-2">
               <div className="flex flex-col items-center gap-1">
@@ -126,27 +123,26 @@ export default function Checkout() {
                   {label}
                 </span>
               </div>
-              {i < 2 && <div className={`w-12 h-1 rounded-full transition-all duration-300 ${stepIndex > i ? 'bg-green-500' : 'bg-border'}`} />}
+              {i < 2 && <div className={`w-10 md:w-14 h-1 rounded-full transition-all duration-300 ${stepIndex > i ? 'bg-green-500' : 'bg-border'}`} />}
             </div>
           ))}
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-6">
-          {/* Form */}
+        <div className="grid lg:grid-cols-3 gap-5 md:gap-6">
           <div className="lg:col-span-2">
 
-            {/* Step 1: Customer Info */}
+            {/* Step 1: Info */}
             {step === 'info' && (
-              <div className="glass-card rounded-3xl p-6 space-y-5 animate-scale-in">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
+              <div className="glass-card rounded-3xl p-5 md:p-6 space-y-5 animate-scale-in">
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
                     <User className="w-5 h-5 text-primary" />
                   </div>
                   <h2 className="bangla text-lg font-bold">{t('ডেলিভারি তথ্য', 'Delivery Information')}</h2>
                 </div>
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="bangla text-sm font-semibold mb-1.5 block text-foreground">{t('পূর্ণ নাম *', 'Full Name *')}</label>
+                    <label className="bangla text-sm font-semibold mb-1.5 block">{t('পূর্ণ নাম *', 'Full Name *')}</label>
                     <input value={customer.name}
                       onChange={e => setCustomer({ ...customer, name: e.target.value })}
                       placeholder={t('আপনার পূর্ণ নাম', 'Your full name')}
@@ -154,7 +150,7 @@ export default function Checkout() {
                     {errors.name && <p className={errorClass}><AlertCircle className="w-3 h-3" />{errors.name}</p>}
                   </div>
                   <div>
-                    <label className="bangla text-sm font-semibold mb-1.5 block text-foreground">{t('মোবাইল নম্বর *', 'Phone Number *')}</label>
+                    <label className="bangla text-sm font-semibold mb-1.5 block">{t('মোবাইল নম্বর *', 'Phone Number *')}</label>
                     <input value={customer.phone}
                       onChange={e => setCustomer({ ...customer, phone: e.target.value })}
                       placeholder="01XXXXXXXXX" type="tel" maxLength={11}
@@ -162,14 +158,14 @@ export default function Checkout() {
                     {errors.phone && <p className={errorClass}><AlertCircle className="w-3 h-3" />{errors.phone}</p>}
                   </div>
                   <div>
-                    <label className="bangla text-sm font-semibold mb-1.5 block text-foreground">{t('ইমেইল (ঐচ্ছিক)', 'Email (Optional)')}</label>
+                    <label className="bangla text-sm font-semibold mb-1.5 block">{t('ইমেইল (ঐচ্ছিক)', 'Email (Optional)')}</label>
                     <input value={customer.email}
                       onChange={e => setCustomer({ ...customer, email: e.target.value })}
                       placeholder="email@example.com" type="email"
                       className={`${inputClass} border-border`} />
                   </div>
                   <div>
-                    <label className="bangla text-sm font-semibold mb-1.5 block text-foreground">{t('জেলা *', 'District *')}</label>
+                    <label className="bangla text-sm font-semibold mb-1.5 block">{t('জেলা *', 'District *')}</label>
                     <select value={customer.district}
                       onChange={e => setCustomer({ ...customer, district: e.target.value })}
                       className={`${inputClass} cursor-pointer ${errors.district ? 'border-red-400 focus:ring-red-400' : 'border-border'}`}>
@@ -178,16 +174,15 @@ export default function Checkout() {
                     </select>
                     {errors.district && <p className={errorClass}><AlertCircle className="w-3 h-3" />{errors.district}</p>}
                     {customer.district && (
-                      <p className={`text-xs mt-1.5 font-semibold bangla flex items-center gap-1 ${isInsideDhaka ? 'text-green-500' : 'text-yellow-500'}`}>
-                        {isInsideDhaka
-                          ? t('✅ ঢাকার ভিতরে — ক্যাশ-অন ডেলিভারি (বিনামূল্যে)!', '✅ Inside Dhaka — Cash on Delivery (Free)!')
-                          : t('📦 ঢাকার বাইরে — ১০০ টাকা ডেলিভারি চার্জ', '📦 Outside Dhaka — ৳100 delivery charge')
-                        }
+                      <p className={`text-xs mt-1.5 font-semibold bangla flex items-center gap-1 ${isInsideNarayanganj ? 'text-green-600' : 'text-yellow-600'}`}>
+                        {isInsideNarayanganj
+                          ? t('✅ নারায়ণগঞ্জের ভিতরে — ক্যাশ-অন ডেলিভারি (বিনামূল্যে)!', '✅ Inside Narayanganj — Cash on Delivery (Free)!')
+                          : t('📦 নারায়ণগঞ্জের বাইরে — ১০০ টাকা ডেলিভারি চার্জ', '📦 Outside Narayanganj — ৳100 delivery charge')}
                       </p>
                     )}
                   </div>
                   <div>
-                    <label className="bangla text-sm font-semibold mb-1.5 block text-foreground">{t('উপজেলা / এলাকা *', 'Upazila / Area *')}</label>
+                    <label className="bangla text-sm font-semibold mb-1.5 block">{t('উপজেলা / এলাকা *', 'Upazila / Area *')}</label>
                     <input value={customer.upazila}
                       onChange={e => setCustomer({ ...customer, upazila: e.target.value })}
                       placeholder={t('উপজেলা বা এলাকার নাম', 'Upazila or area name')}
@@ -195,7 +190,7 @@ export default function Checkout() {
                     {errors.upazila && <p className={errorClass}><AlertCircle className="w-3 h-3" />{errors.upazila}</p>}
                   </div>
                   <div className="sm:col-span-2">
-                    <label className="bangla text-sm font-semibold mb-1.5 block text-foreground">{t('সম্পূর্ণ ঠিকানা *', 'Full Address *')}</label>
+                    <label className="bangla text-sm font-semibold mb-1.5 block">{t('সম্পূর্ণ ঠিকানা *', 'Full Address *')}</label>
                     <textarea value={customer.address}
                       onChange={e => setCustomer({ ...customer, address: e.target.value })}
                       placeholder={t('বাড়ি নং, রাস্তা, মহল্লা, এলাকা...', 'House no, road, area...')} rows={3}
@@ -203,7 +198,7 @@ export default function Checkout() {
                     {errors.address && <p className={errorClass}><AlertCircle className="w-3 h-3" />{errors.address}</p>}
                   </div>
                   <div className="sm:col-span-2">
-                    <label className="bangla text-sm font-semibold mb-1.5 block text-foreground">{t('বিশেষ নোট (ঐচ্ছিক)', 'Special Note (Optional)')}</label>
+                    <label className="bangla text-sm font-semibold mb-1.5 block">{t('বিশেষ নোট (ঐচ্ছিক)', 'Special Note (Optional)')}</label>
                     <textarea value={notes} onChange={e => setNotes(e.target.value)}
                       placeholder={t('কোনো বিশেষ নির্দেশনা থাকলে লিখুন...', 'Any special instructions...')} rows={2}
                       className={`${inputClass} border-border resize-none`} />
@@ -218,16 +213,14 @@ export default function Checkout() {
 
             {/* Step 2: Payment */}
             {step === 'payment' && (
-              <div className="glass-card rounded-3xl p-6 space-y-5 animate-scale-in">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
+              <div className="glass-card rounded-3xl p-5 md:p-6 space-y-5 animate-scale-in">
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
                     <CreditCard className="w-5 h-5 text-primary" />
                   </div>
                   <h2 className="bangla text-lg font-bold">{t('পেমেন্ট পদ্ধতি', 'Payment Method')}</h2>
                 </div>
-
                 <div className="grid sm:grid-cols-2 gap-3">
-                  {/* COD - shown for Dhaka or when district not selected yet */}
                   <button onClick={() => setPaymentMethod('cod')}
                     className={`p-5 rounded-2xl border-2 text-left transition-all duration-200 hover:shadow-md ${
                       paymentMethod === 'cod'
@@ -239,12 +232,14 @@ export default function Checkout() {
                       {t('ক্যাশ-অন ডেলিভারি', 'Cash on Delivery')}
                     </p>
                     <p className="bangla text-xs text-muted-foreground">
-                      {isInsideDhaka
-                        ? t('পণ্য পেয়ে পেমেন্ট করুন (ঢাকায়)', 'Pay when you receive (Dhaka)')
+                      {isInsideNarayanganj
+                        ? t('পণ্য পেয়ে পেমেন্ট করুন (নারায়ণগঞ্জ)', 'Pay when received (Narayanganj)')
                         : t('পণ্য পেয়ে পেমেন্ট করুন', 'Pay when you receive')}
                     </p>
-                    {isInsideDhaka && (
-                      <p className="bangla text-xs text-green-600 font-semibold mt-1">✅ {t('ঢাকায় উপলব্ধ', 'Available in Dhaka')}</p>
+                    {isInsideNarayanganj && (
+                      <p className="bangla text-xs text-green-600 font-semibold mt-1">
+                        ✅ {t('নারায়ণগঞ্জে বিনামূল্যে', 'Free in Narayanganj')}
+                      </p>
                     )}
                   </button>
                   <button onClick={() => setPaymentMethod('bkash')}
@@ -261,13 +256,11 @@ export default function Checkout() {
                 </div>
 
                 {paymentMethod === 'bkash' && (
-                  <div className="space-y-4 p-5 bg-pink-50 dark:bg-pink-900/10 rounded-2xl border border-pink-200 dark:border-pink-800">
-                    <div className="flex items-center gap-2">
-                      <AlertCircle className="w-4 h-4 text-pink-600 dark:text-pink-400 shrink-0" />
-                      <p className="bangla text-sm font-semibold text-pink-700 dark:text-pink-400">
-                        {t('নিচের নম্বরে সেন্ড মানি করুন:', 'Send money to the number below:')}
-                      </p>
-                    </div>
+                  <div className="space-y-4 p-4 md:p-5 bg-pink-50 dark:bg-pink-900/10 rounded-2xl border border-pink-200 dark:border-pink-800">
+                    <p className="bangla text-sm font-semibold text-pink-700 dark:text-pink-400 flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4 shrink-0" />
+                      {t('নিচের নম্বরে সেন্ড মানি করুন:', 'Send money to the number below:')}
+                    </p>
                     <div className="grid sm:grid-cols-2 gap-3">
                       {BKASH_NUMBERS.map(n => (
                         <button key={n} onClick={() => setSelectedBkash(n)}
@@ -283,7 +276,7 @@ export default function Checkout() {
                     </div>
                     <div className="bg-pink-100 dark:bg-pink-900/20 rounded-xl p-3">
                       <p className="bangla text-sm text-pink-700 dark:text-pink-300 font-medium">
-                        💰 {t('মোট:', 'Total:')} <strong>{formatPriceEn(grandTotal)}</strong> {t('পাঠান। তারপর ট্রানজেকশন আইডি নিচে দিন।', 'Send. Then enter Transaction ID below.')}
+                        💰 {t('মোট:', 'Total:')} <strong>{formatPriceEn(grandTotal)}</strong> {t('পাঠান। তারপর নিচে ট্রানজেকশন আইডি দিন।', 'Send. Then enter Transaction ID below.')}
                       </p>
                     </div>
                     <div>
@@ -302,18 +295,16 @@ export default function Checkout() {
                     </div>
                   </div>
                 )}
-
                 {paymentMethod === 'cod' && (
                   <div className="p-4 bg-green-50 dark:bg-green-900/10 rounded-2xl border border-green-200 dark:border-green-800">
                     <p className="bangla text-sm text-green-700 dark:text-green-400 font-medium">
-                      ✅ {t(
-                        'পণ্য ডেলিভারির সময় নগদে পেমেন্ট করুন। ঢাকার ভিতরে সম্পূর্ণ বিনামূল্যে।',
-                        'Pay in cash when you receive the product. Completely free inside Dhaka.'
-                      )}
+                      ✅ {isInsideNarayanganj
+                        ? t('নারায়ণগঞ্জে পণ্য পেয়ে নগদে পেমেন্ট করুন — সম্পূর্ণ বিনামূল্যে ডেলিভারি!',
+                           'Pay cash on delivery in Narayanganj — completely free delivery!')
+                        : t('পণ্য ডেলিভারির সময় নগদে পেমেন্ট করুন।', 'Pay in cash when you receive the product.')}
                     </p>
                   </div>
                 )}
-
                 <div className="flex gap-3">
                   <button onClick={() => setStep('info')}
                     className="flex items-center gap-2 px-5 py-3 rounded-2xl border border-border font-semibold bangla hover:bg-muted transition-colors">
@@ -329,18 +320,16 @@ export default function Checkout() {
 
             {/* Step 3: Confirm */}
             {step === 'confirm' && (
-              <div className="glass-card rounded-3xl p-6 space-y-5 animate-scale-in">
+              <div className="glass-card rounded-3xl p-5 md:p-6 space-y-5 animate-scale-in">
                 <div className="flex items-center gap-2">
-                  <div className="w-9 h-9 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                  <div className="w-9 h-9 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center shrink-0">
                     <CheckCircle className="w-5 h-5 text-green-600" />
                   </div>
                   <h2 className="bangla text-lg font-bold">{t('অর্ডার নিশ্চিত করুন', 'Confirm Your Order')}</h2>
                 </div>
-
-                {/* Customer Summary */}
                 <div className="bg-muted/50 rounded-2xl p-4 space-y-3">
                   <h3 className="bangla font-semibold text-sm flex items-center gap-2">
-                    <MapPin className="w-4 h-4 text-primary" />
+                    <Truck className="w-4 h-4 text-primary" />
                     {t('ডেলিভারি তথ্য', 'Delivery Info')}
                   </h3>
                   <div className="grid sm:grid-cols-2 gap-x-4 gap-y-2 text-sm">
@@ -370,22 +359,24 @@ export default function Checkout() {
                     )}
                   </div>
                 </div>
-
-                {/* Items */}
                 <div className="space-y-2">
                   <h3 className="bangla font-semibold text-sm">{t('অর্ডার আইটেম', 'Order Items')}</h3>
                   {items.map(item => (
-                    <div key={item.product.id} className="flex items-center gap-3 p-3 rounded-xl bg-muted/30 border border-border/50">
+                    <div key={`${item.product.id}-${item.size}`} className="flex items-center gap-3 p-3 rounded-xl bg-muted/30 border border-border/50">
                       <img src={item.product.images[0] || ''} alt=""
-                        className="w-12 h-12 rounded-lg object-cover border border-border" />
-                      <span className="bangla text-sm flex-1 font-medium">
-                        {t(item.product.nameBn, item.product.name)} × {item.quantity}
-                      </span>
-                      <span className="text-sm font-bold text-primary">{formatPriceEn(item.product.price * item.quantity)}</span>
+                        className="w-12 h-12 rounded-lg object-cover border border-border shrink-0"
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <span className="bangla text-sm font-medium line-clamp-1">
+                          {t(item.product.nameBn, item.product.name)} × {item.quantity}
+                        </span>
+                        {item.size && <p className="text-xs text-muted-foreground bangla">সাইজ: {item.size}</p>}
+                      </div>
+                      <span className="text-sm font-bold text-primary shrink-0">{formatPriceEn(item.product.price * item.quantity)}</span>
                     </div>
                   ))}
                 </div>
-
                 <div className="flex gap-3 pt-2">
                   <button onClick={() => setStep('payment')}
                     className="flex items-center gap-2 px-5 py-3 rounded-2xl border border-border font-semibold bangla hover:bg-muted transition-colors">
@@ -406,19 +397,22 @@ export default function Checkout() {
             )}
           </div>
 
-          {/* Order Summary Sidebar */}
+          {/* Order Summary */}
           <div>
             <div className="glass-card rounded-3xl p-5 sticky top-24">
               <h3 className="bangla font-bold text-base mb-5 flex items-center gap-2">
                 <ShoppingBag className="w-4 h-4 text-primary" />
                 {t('অর্ডার সারাংশ', 'Order Summary')}
               </h3>
-              <div className="space-y-2 mb-4 max-h-64 overflow-y-auto">
+              <div className="space-y-2 mb-4 max-h-52 overflow-y-auto">
                 {items.map(item => (
-                  <div key={item.product.id} className="flex justify-between items-center text-sm gap-2">
-                    <span className="bangla text-muted-foreground line-clamp-1 flex-1">
-                      {t(item.product.nameBn, item.product.name)} ×{item.quantity}
-                    </span>
+                  <div key={`${item.product.id}-${item.size}`} className="flex justify-between items-start text-sm gap-2">
+                    <div className="flex-1 min-w-0">
+                      <span className="bangla text-muted-foreground line-clamp-1">
+                        {t(item.product.nameBn, item.product.name)} ×{item.quantity}
+                      </span>
+                      {item.size && <p className="text-xs text-muted-foreground">সাইজ: {item.size}</p>}
+                    </div>
                     <span className="font-semibold shrink-0">{formatPriceEn(item.product.price * item.quantity)}</span>
                   </div>
                 ))}
@@ -444,13 +438,13 @@ export default function Checkout() {
               </div>
               {customer.district && (
                 <div className={`mt-4 p-3 rounded-xl text-xs bangla font-semibold text-center ${
-                  isInsideDhaka
+                  isInsideNarayanganj
                     ? 'bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400'
                     : 'bg-yellow-100 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400'
                 }`}>
-                  {isInsideDhaka
-                    ? t('✅ ঢাকায় ক্যাশ-অন ডেলিভারি — বিনামূল্যে!', '✅ COD in Dhaka — Free!')
-                    : t('📦 ঢাকার বাইরে — ১০০ টাকা ডেলিভারি চার্জ', '📦 Outside Dhaka — ৳100 charge')}
+                  {isInsideNarayanganj
+                    ? t('✅ নারায়ণগঞ্জে ক্যাশ-অন ডেলিভারি — বিনামূল্যে!', '✅ COD in Narayanganj — Free!')
+                    : t('📦 নারায়ণগঞ্জের বাইরে — ১০০ টাকা ডেলিভারি চার্জ', '📦 Outside Narayanganj — ৳100 charge')}
                 </div>
               )}
             </div>

@@ -11,6 +11,8 @@ export interface Product {
   stock: number;
   badge?: 'new' | 'hot' | 'sale';
   featured: boolean;
+  sizes?: string[];
+  colors?: string[];
   createdAt: string;
 }
 
@@ -50,7 +52,7 @@ export interface CustomerInfo {
   address: string;
   district: string;
   upazila: string;
-  insideDhaka: boolean;
+  insideNarayanganj: boolean;
 }
 
 export interface Announcement {
